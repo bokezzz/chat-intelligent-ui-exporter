@@ -295,7 +295,7 @@
 .synccat select{flex:1;min-width:140px;font-size:12px;border:1px solid color-mix(in srgb,var(--text) 24%,transparent);border-radius:6px;background:var(--bg);color:var(--text);padding:4px 6px}
 .synccat-new{display:flex;gap:6px;width:100%;margin-top:2px}
 .synccat-new input{flex:1;min-width:0;font-size:12px;border:1px solid color-mix(in srgb,var(--text) 26%,transparent);border-radius:6px;background:var(--bg);color:var(--text);padding:4px 8px}
-.catbox{padding:10px 14px 12px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);display:flex;flex-direction:column;gap:8px}
+.catbox{padding:10px 14px 12px 26px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent);background:color-mix(in srgb,var(--bg) 45%,var(--surface));display:flex;flex-direction:column;gap:8px}
 .cathead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .cathead b{font-size:13px;font-weight:500}
 .cathead span{font-size:11.5px;color:var(--muted)}
