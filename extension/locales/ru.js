@@ -594,5 +594,11 @@
     "set.chats.search": "Поиск синхронизированных чатов…",
     "set.chats.empty": "Синхронизированных чатов пока нет. Нажмите «Сканировать папки» или сначала синхронизируйте чат.",
     "set.chats.meta": "{0} сообщ. · v{1} · {2}",
+    "set.chats.delete": "Удалить этот синхронизированный архив из Obsidian",
+    "set.chats.deleteConfirm": "Удалить папку синхронизации «{0}» из Obsidian? (Исходный чат в ChatGPT не будет затронут)",
+    "set.chats.deleteDir": "Удалить папку",
+    "set.chats.deleteDirConfirm": "Удалить пустую папку «{0}» из Obsidian?",
+    "set.chats.deleteDirConfirmCount": "Удалить папку «{0}» и все {1} синхронизированных чатов внутри неё из Obsidian? (Исходные чаты в ChatGPT не будут затронуты)",
+    "status.syncDeleted": "Удалено из Obsidian",
   "status.syncScanned": "Найдено подпапок: {0}",
 };

@@ -594,5 +594,11 @@
     "set.chats.search": "Buscar chats sincronizados…",
     "set.chats.empty": "Aún no hay chats sincronizados. Pulsa «Escanear carpetas» o sincroniza un chat primero.",
     "set.chats.meta": "{0} mensajes · v{1} · {2}",
+    "set.chats.delete": "Eliminar este archivo sincronizado de Obsidian",
+    "set.chats.deleteConfirm": "¿Eliminar la carpeta sincronizada \"{0}\" de Obsidian? (Tu chat original en ChatGPT no se verá afectado)",
+    "set.chats.deleteDir": "Eliminar carpeta",
+    "set.chats.deleteDirConfirm": "¿Eliminar la carpeta vacía \"{0}\" de Obsidian?",
+    "set.chats.deleteDirConfirmCount": "¿Eliminar la carpeta \"{0}\" y sus {1} chats sincronizados de Obsidian? (Tus chats originales en ChatGPT no se verán afectados)",
+    "status.syncDeleted": "Eliminado de Obsidian",
   "status.syncScanned": "{0} subcarpetas encontradas",
 };

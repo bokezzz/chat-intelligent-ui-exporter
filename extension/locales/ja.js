@@ -594,5 +594,11 @@
     "set.chats.search": "同期済みチャットを検索…",
     "set.chats.empty": "同期済みチャットはまだありません。「フォルダをスキャン」するか先に同期してください",
     "set.chats.meta": "{0} 件のメッセージ · v{1} · {2}",
+    "set.chats.delete": "Obsidian からこの同期アーカイブを削除",
+    "set.chats.deleteConfirm": "Obsidian から「{0}」の同期フォルダとファイルを削除しますか？（ChatGPT 側の元チャットは削除されません）",
+    "set.chats.deleteDir": "フォルダを削除",
+    "set.chats.deleteDirConfirm": "Obsidian から空フォルダ「{0}」を削除しますか？",
+    "set.chats.deleteDirConfirmCount": "Obsidian からフォルダ「{0}」と中の同期済みチャット {1} 件を削除しますか？（ChatGPT 側の元チャットは削除されません）",
+    "status.syncDeleted": "Obsidian から削除しました",
   "status.syncScanned": "{0} 個のサブフォルダを検出しました",
 };

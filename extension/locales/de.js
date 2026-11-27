@@ -594,5 +594,11 @@
     "set.chats.search": "Synchronisierte Chats suchen…",
     "set.chats.empty": "Noch keine synchronisierten Chats. Klicke auf „Ordner scannen“ oder synchronisiere zuerst einen Chat.",
     "set.chats.meta": "{0} Nachrichten · v{1} · {2}",
+    "set.chats.delete": "Dieses synchronisierte Archiv aus Obsidian löschen",
+    "set.chats.deleteConfirm": "Den synchronisierten Ordner „{0}“ aus Obsidian löschen? (Dein Original-Chat in ChatGPT bleibt erhalten)",
+    "set.chats.deleteDir": "Ordner löschen",
+    "set.chats.deleteDirConfirm": "Den leeren Ordner „{0}“ aus Obsidian löschen?",
+    "set.chats.deleteDirConfirmCount": "Den Ordner „{0}“ samt {1} synchronisierten Chats aus Obsidian löschen? (Deine Original-Chats in ChatGPT bleiben erhalten)",
+    "status.syncDeleted": "Aus Obsidian gelöscht",
   "status.syncScanned": "{0} Unterordner gefunden",
 };

@@ -321,6 +321,9 @@
 .chattitle:hover{color:var(--pri-deep);text-decoration:underline}
 .chatmeta{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chatitem select.fs{max-width:160px;flex:none}
+.chatdel{width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--muted);display:inline-grid;place-items:center;flex:none;opacity:.65;transition:background .12s,color .12s,opacity .12s}
+.chatdel:hover{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err);opacity:1}
+.chatdel .ic{width:13px;height:13px}
 .chatempty{padding:24px 12px;text-align:center;color:var(--muted);font-size:12.5px}
 .chattree{display:flex;flex-direction:column;gap:4px}
 .chattree-node{display:flex;flex-direction:column;gap:4px}

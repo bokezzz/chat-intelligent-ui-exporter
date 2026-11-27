@@ -594,5 +594,11 @@
     "set.chats.search": "搜尋已同步對話…",
     "set.chats.empty": "尚無已同步對話，點「掃描目錄」載入或先同步一則對話",
     "set.chats.meta": "{0} 則訊息 · v{1} · {2}",
+    "set.chats.delete": "從 Obsidian 刪除此對話歸檔",
+    "set.chats.deleteConfirm": "確認從 Obsidian 刪除「{0}」的歸檔資料夾及附件？（不會刪除 ChatGPT 裡的原對話）",
+    "set.chats.deleteDir": "刪除此目錄",
+    "set.chats.deleteDirConfirm": "確認從 Obsidian 刪除空目錄「{0}」？",
+    "set.chats.deleteDirConfirmCount": "確認從 Obsidian 刪除目錄「{0}」及其中的 {1} 則已同步歸檔？（不會刪除 ChatGPT 裡的原對話）",
+    "status.syncDeleted": "已從 Obsidian 刪除",
   "status.syncScanned": "已掃描到 {0} 個子目錄",
 };

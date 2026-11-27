@@ -608,5 +608,11 @@
     "set.chats.search": "Search synced chats…",
     "set.chats.empty": "No synced chats yet. Click \"Scan folders\" or sync a chat first.",
     "set.chats.meta": "{0} messages · v{1} · {2}",
+    "set.chats.delete": "Delete synced folder from Obsidian",
+    "set.chats.deleteConfirm": "Delete the synced archive \"{0}\" from Obsidian? This will remove its folder and files on disk (your original ChatGPT chat is not affected).",
+    "set.chats.deleteDir": "Delete folder",
+    "set.chats.deleteDirConfirm": "Delete the empty folder \"{0}\" from Obsidian?",
+    "set.chats.deleteDirConfirmCount": "Delete folder \"{0}\" and all {1} synced chats inside it from Obsidian? (Your original ChatGPT chats are not affected.)",
+    "status.syncDeleted": "Deleted from Obsidian",
   "status.syncScanned": "Found {0} subfolders",
 };

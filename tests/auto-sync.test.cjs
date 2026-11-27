@@ -438,4 +438,13 @@ test('scanSyncRoot lists all nested category directories under ChatGPT-Raw only,
   assert.equal(updatedMeta.category, 'Embedded');
   assert.equal(updatedMeta.relative_path, `ChatGPT-Raw/Embedded/${folderName}/conversation.md`);
   assert.equal(vault.dirs.get('ChatGPT-Raw').dirs.get('408').dirs.get('OS').dirs.has(folderName), false);
+
+  // deleteSyncFolder removes a single synced chat folder and can also remove an entire category directory.
+  const delChat = await ob.deleteSyncFolder(vault, {subfolder: 'ChatGPT-Raw/Embedded', folderName});
+  assert.equal(delChat.deleted, true);
+  assert.equal(vault.dirs.get('ChatGPT-Raw').dirs.get('Embedded').dirs.has(folderName), false);
+
+  const delDir = await ob.deleteSyncFolder(vault, {subfolder: 'ChatGPT-Raw/408/OS'});
+  assert.equal(delDir.deleted, true);
+  assert.equal(vault.dirs.get('ChatGPT-Raw').dirs.get('408').dirs.has('OS'), false);
 });

@@ -87,6 +87,18 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       });
       return {id: (await chrome.tabs.create({url: chrome.runtime.getURL(`obsidian.html?${q}`), index: sender.tab.index + 1, openerTabId: sender.tab.id, active: false})).id};
     }
+    if (message.type === 'obsidian:delete') {
+      const q = new URLSearchParams({
+        delete: '1',
+        kind: message.kind === 'dir' ? 'dir' : 'chat',
+        base: String(message.base || 'ChatGPT-Raw').slice(0, 60),
+        sub: String(message.sub || '').slice(0, 180),
+        folder: String(message.folder || '').slice(0, 120),
+        cat: String(message.cat || '').slice(0, 120),
+        cid: String(message.cid || '').slice(0, 80),
+      });
+      return {id: (await chrome.tabs.create({url: chrome.runtime.getURL(`obsidian.html?${q}`), index: sender.tab.index + 1, openerTabId: sender.tab.id, active: false})).id};
+    }
     throw Error(t('bg.unknown'));
   })().then(result => reply(result), error => reply({error: error.message}));
   return true;

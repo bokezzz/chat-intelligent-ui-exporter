@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.3.2';
+  const version='1.3.3';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -883,8 +883,24 @@
       sel.innerHTML=`<option value="">${esc(t('side.syncCatRoot',base))}</option>`+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
       sel.value=cat;
       sel.addEventListener('change',()=>moveChatToCategory(cid,rec,sel.value,sel));
+      const delBtn=document.createElement('button');delBtn.type='button';delBtn.className='chatdel';delBtn.title=t('set.chats.delete');delBtn.setAttribute('aria-label',t('set.chats.delete'));delBtn.innerHTML=icon('x');
+      delBtn.addEventListener('click',async e=>{
+        e.stopPropagation();
+        const label=rec.title||rec.folderName||cid;
+        if(!window.confirm(t('set.chats.deleteConfirm',label)))return;
+        const fromSub=rec.subfolder||AutoSync.resolveSubfolder(base,rec.category||'');
+        delBtn.disabled=true;
+        try{
+          await send({type:'obsidian:delete',kind:'chat',base,sub:fromSub,folder:rec.folderName,cid});
+          if(resident)toast(t('status.syncDeleted'));
+        }catch(err){
+          if(resident)toast(err?.message||String(err));
+        }finally{
+          delBtn.disabled=false;
+        }
+      });
       row.addEventListener('dragstart',e=>{
-        if(e.target?.closest?.('select')){e.preventDefault();return;}
+        if(e.target?.closest?.('select,button')){e.preventDefault();return;}
         draggingChat={cid,rec,cat};
         row.classList.add('dragging');
         if(e.dataTransfer){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',cid);}
@@ -894,7 +910,7 @@
         row.classList.remove('dragging');
         clearDropHighlight();
       });
-      row.append(grip,info,sel);
+      row.append(grip,info,sel,delBtn);
       return row;
     };
     const renderNode=node=>{
@@ -904,6 +920,23 @@
       if(isCollapsed)wrap.classList.add('collapsed');
       const head=document.createElement('button');head.type='button';head.className='chattree-head';
       head.innerHTML=`${icon('chev','tchev')}${icon('archive','tic')}<span class="tname">${esc(node.name)}</span><span class="tcnt">${cnt}</span>`;
+      if(node.path){
+        const rmdir=document.createElement('span');rmdir.className='chatdel';rmdir.setAttribute('role','button');rmdir.tabIndex=0;rmdir.title=t('set.chats.deleteDir');rmdir.setAttribute('aria-label',t('set.chats.deleteDir'));rmdir.innerHTML=icon('x');
+        const runRmdir=async e=>{
+          e.stopPropagation();e.preventDefault();
+          const msg=cnt?t('set.chats.deleteDirConfirmCount',node.path,cnt):t('set.chats.deleteDirConfirm',node.path);
+          if(!window.confirm(msg))return;
+          try{
+            await send({type:'obsidian:delete',kind:'dir',base,cat:node.path});
+            if(resident)toast(t('status.syncDeleted'));
+          }catch(err){
+            if(resident)toast(err?.message||String(err));
+          }
+        };
+        rmdir.addEventListener('click',runRmdir);
+        rmdir.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')runRmdir(e);});
+        head.append(rmdir);
+      }
       head.onclick=()=>{
         if(collapsedChatDirs.has(node.path))collapsedChatDirs.delete(node.path);
         else collapsedChatDirs.add(node.path);

@@ -594,5 +594,11 @@
     "set.chats.search": "Rechercher des discussions synchronisées…",
     "set.chats.empty": "Aucune discussion synchronisée pour le moment. Cliquez sur « Analyser les dossiers » ou synchronisez une discussion.",
     "set.chats.meta": "{0} messages · v{1} · {2}",
+    "set.chats.delete": "Supprimer cette archive synchronisée d’Obsidian",
+    "set.chats.deleteConfirm": "Supprimer le dossier synchronisé « {0} » d’Obsidian ? (Votre discussion d’origine dans ChatGPT n’est pas affectée)",
+    "set.chats.deleteDir": "Supprimer le dossier",
+    "set.chats.deleteDirConfirm": "Supprimer le dossier vide « {0} » d’Obsidian ?",
+    "set.chats.deleteDirConfirmCount": "Supprimer le dossier « {0} » et ses {1} discussions synchronisées d’Obsidian ? (Vos discussions d’origine dans ChatGPT ne sont pas affectées)",
+    "status.syncDeleted": "Supprimé d’Obsidian",
   "status.syncScanned": "{0} sous-dossiers trouvés",
 };

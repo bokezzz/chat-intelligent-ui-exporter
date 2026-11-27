@@ -594,5 +594,11 @@
     "set.chats.search": "동기화된 대화 검색…",
     "set.chats.empty": "동기화된 대화가 아직 없습니다. \"폴더 스캔\"을 누르거나 먼저 동기화하세요",
     "set.chats.meta": "메시지 {0}개 · v{1} · {2}",
+    "set.chats.delete": "Obsidian에서 이 동기화 아카이브 삭제",
+    "set.chats.deleteConfirm": "Obsidian에서 \"{0}\"의 동기화 폴더와 파일을 삭제할까요? (ChatGPT의 원본 대화는 삭제되지 않습니다)",
+    "set.chats.deleteDir": "폴더 삭제",
+    "set.chats.deleteDirConfirm": "Obsidian에서 빈 폴더 \"{0}\"을(를) 삭제할까요?",
+    "set.chats.deleteDirConfirmCount": "Obsidian에서 폴더 \"{0}\"과(와) 그 안의 동기화된 대화 {1}개를 모두 삭제할까요? (ChatGPT의 원본 대화는 삭제되지 않습니다)",
+    "status.syncDeleted": "Obsidian에서 삭제됨",
   "status.syncScanned": "{0}개 하위 폴더를 찾았습니다",
 };

@@ -594,5 +594,11 @@
     "set.chats.search": "Pesquisar conversas sincronizadas…",
     "set.chats.empty": "Nenhuma conversa sincronizada ainda. Clique em \"Escanear pastas\" ou sincronize uma conversa primeiro.",
     "set.chats.meta": "{0} mensagens · v{1} · {2}",
+    "set.chats.delete": "Excluir este arquivo sincronizado do Obsidian",
+    "set.chats.deleteConfirm": "Excluir a pasta sincronizada \"{0}\" do Obsidian? (Sua conversa original no ChatGPT não será afetada)",
+    "set.chats.deleteDir": "Excluir pasta",
+    "set.chats.deleteDirConfirm": "Excluir a pasta vazia \"{0}\" do Obsidian?",
+    "set.chats.deleteDirConfirmCount": "Excluir a pasta \"{0}\" e todas as {1} conversas sincronizadas nela do Obsidian? (Suas conversas originais no ChatGPT não serão afetadas)",
+    "status.syncDeleted": "Excluído do Obsidian",
   "status.syncScanned": "{0} subpastas encontradas",
 };
