@@ -589,5 +589,10 @@
   "set.syncCats.empty": "Aucun — créez-en ici ou dans un chat",
   "set.syncCats.count": "{0} sous-dossiers",
   "set.syncCats.scan": "Analyser les dossiers",
+    "set.chats": "Discussions synchronisées",
+    "set.chats.summary": "Gérer les dossiers de toutes les discussions synchronisées",
+    "set.chats.search": "Rechercher des discussions synchronisées…",
+    "set.chats.empty": "Aucune discussion synchronisée pour le moment. Cliquez sur « Analyser les dossiers » ou synchronisez une discussion.",
+    "set.chats.meta": "{0} messages · v{1} · {2}",
   "status.syncScanned": "{0} sous-dossiers trouvés",
 };

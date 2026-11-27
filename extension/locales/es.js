@@ -589,5 +589,10 @@
   "set.syncCats.empty": "Ninguna aún — créala aquí o en un chat",
   "set.syncCats.count": "{0} subcarpetas",
   "set.syncCats.scan": "Escanear carpetas",
+    "set.chats": "Chats sincronizados",
+    "set.chats.summary": "Administra las carpetas de todos los chats sincronizados",
+    "set.chats.search": "Buscar chats sincronizados…",
+    "set.chats.empty": "Aún no hay chats sincronizados. Pulsa «Escanear carpetas» o sincroniza un chat primero.",
+    "set.chats.meta": "{0} mensajes · v{1} · {2}",
   "status.syncScanned": "{0} subcarpetas encontradas",
 };

@@ -188,6 +188,8 @@
             const subfolder = cat ? `${baseStr}/${cat}` : baseStr;
             bindings[meta.conversation_id] = {
               conversationId: meta.conversation_id,
+              title: meta.title || folderName,
+              sourceUrl: meta.source_url || '',
               folderName,
               category: cat,
               subfolder,
@@ -395,11 +397,12 @@
     try {$('version').textContent = `v${chrome.runtime.getManifest().version}`;} catch {}
     const params = new URLSearchParams(win.location.search), tabId = Number(params.get('tab')), jobId = params.get('job');
     const isSyncParam = params.get('sync') === '1';
-    const isScan = params.get('scan') === '1', isMkdir = params.get('mkdir') === '1';
+    const isScan = params.get('scan') === '1', isMkdir = params.get('mkdir') === '1', isMove = params.get('move') === '1';
     const scanBase = params.get('base') || 'ChatGPT-Raw', mkdirCat = params.get('cat') || '';
+    const moveFrom = params.get('from') || '', moveTo = params.get('to') || '', moveFolder = params.get('folder') || '';
     // ?setup: opened from the panel's 更改笔记文件夹 to see or change the folder; nothing is sent.
     const setup = params.has('setup');let changed = false;
-    if (!setup && !isScan && !isMkdir && (!tabId || !jobId)) {say(t('obs.alone'), true);return;}
+    if (!setup && !isScan && !isMkdir && !isMove && (!tabId || !jobId)) {say(t('obs.alone'), true);return;}
 
     let job = null, folder = null, port = null, done = false;
     const isSilentSync = () => !!(job?.meta?.mode === 'sync' && !job?.meta?.interactive) || (isSyncParam && !job);
@@ -419,7 +422,7 @@
       if (!folder) {
         dest(t('obs.noFolder'), false);show('pick');
         if (setup) {say(t('obs.setupNone'));hint(t('obs.setupHint'));}
-        else if (isScan || isMkdir) {say(t('obs.firstUse'));hint(t('obs.firstHint'));front();}
+        else if (isScan || isMkdir || isMove) {say(t('obs.firstUse'));hint(t('obs.firstHint'));front();}
         else if (job) {
           if (isSilentSync()) {
             if (port) port.postMessage({type: 'need_permission', reason: 'pick'});
@@ -434,6 +437,21 @@
       const perm = await folder.queryPermission({mode: 'readwrite'});
       dest(`${folder.name}${notePath()}`);remember(folder.name);
       log(t('obs.permState', perm));
+      if (isMove) {
+        if (perm === 'granted') {
+          try {
+            await moveSyncFolder(folder, {fromSubfolder: moveFrom, toSubfolder: moveTo, folderName: moveFolder, category: mkdirCat});
+            const scan = await scanSyncRoot(folder, scanBase);
+            await persistScanResult(scan, false);
+            say(t('status.syncMigrated', moveTo));
+            setTimeout(() => win.close(), 150);
+          } catch (e) {say(t('obs.writeFailed', e?.message || e), true);front();}
+        } else {
+          show('grant', 'repick');front();
+          say(t('obs.needGrant', folder.name));hint(t('obs.grantHint'));
+        }
+        return;
+      }
       if (isMkdir) {
         if (perm === 'granted') {
           try {
@@ -529,7 +547,7 @@
     $('pick').onclick = pick;$('repick').onclick = pick;$('write').onclick = write;
     $('grant').onclick = async () => {const perm = await folder.requestPermission({mode: 'readwrite'});log(`requestPermission → ${perm}`);if (perm === 'granted') {notifyGranted();if (job) write(); else refresh();} else refresh();};
 
-    if (setup || isScan || isMkdir) {$('convLab').hidden = true;$('conv').textContent = t('obs.folderLabel');refresh();return;}
+    if (setup || isScan || isMkdir || isMove) {$('convLab').hidden = true;$('conv').textContent = t('obs.folderLabel');refresh();return;}
     const take = receiver();let received = 0;
     port = chrome.tabs.connect(tabId, {name: `obsidian:${jobId}`, frameId: 0});
     port.onMessage.addListener(message => {

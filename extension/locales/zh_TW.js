@@ -589,5 +589,10 @@
   "set.syncCats.empty": "尚無子目錄，可在此或對話頁新增",
   "set.syncCats.count": "{0} 個子目錄",
   "set.syncCats.scan": "掃描目錄",
+    "set.chats": "對話目錄",
+    "set.chats.summary": "統一管理所有已同步對話的歸檔目錄",
+    "set.chats.search": "搜尋已同步對話…",
+    "set.chats.empty": "尚無已同步對話，點「掃描目錄」載入或先同步一則對話",
+    "set.chats.meta": "{0} 則訊息 · v{1} · {2}",
   "status.syncScanned": "已掃描到 {0} 個子目錄",
 };

@@ -420,4 +420,22 @@ test('scanSyncRoot lists all nested category directories under ChatGPT-Raw only,
   assert.ok(scan.bindings['conv-scan-1']);
   assert.equal(scan.bindings['conv-scan-1'].category, '408/OS');
   assert.equal(scan.bindings['conv-scan-1'].subfolder, 'ChatGPT-Raw/408/OS');
+  assert.equal(scan.bindings['conv-scan-1'].title, 'Virtual Memory');
+  assert.equal(scan.bindings['conv-scan-1'].sourceUrl, 'https://chatgpt.com/c/conv-scan-1');
+
+  // Standalone moveSyncFolder relocates the folder without re-syncing ChatGPT, updates metadata.json, and deletes old folder.
+  const folderName = scan.bindings['conv-scan-1'].folderName;
+  const moved = await ob.moveSyncFolder(vault, {
+    fromSubfolder: 'ChatGPT-Raw/408/OS',
+    toSubfolder: 'ChatGPT-Raw/Embedded',
+    folderName,
+    category: 'Embedded',
+  });
+  assert.equal(moved.moved, true);
+  assert.equal(moved.notePath, `ChatGPT-Raw/Embedded/${folderName}/conversation.md`);
+  assert.equal(await at(vault, `ChatGPT-Raw/Embedded/${folderName}/assets/a.png`).text(), 'png');
+  const updatedMeta = JSON.parse(await at(vault, `ChatGPT-Raw/Embedded/${folderName}/metadata.json`).text());
+  assert.equal(updatedMeta.category, 'Embedded');
+  assert.equal(updatedMeta.relative_path, `ChatGPT-Raw/Embedded/${folderName}/conversation.md`);
+  assert.equal(vault.dirs.get('ChatGPT-Raw').dirs.get('408').dirs.get('OS').dirs.has(folderName), false);
 });

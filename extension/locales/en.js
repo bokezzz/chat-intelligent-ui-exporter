@@ -603,5 +603,10 @@
   "set.syncCats.empty": "None yet — create here or inside any chat",
   "set.syncCats.count": "{0} subfolders",
   "set.syncCats.scan": "Scan folders",
+    "set.chats": "Synced Chats",
+    "set.chats.summary": "View all synced chats and move them between folders",
+    "set.chats.search": "Search synced chats…",
+    "set.chats.empty": "No synced chats yet. Click \"Scan folders\" or sync a chat first.",
+    "set.chats.meta": "{0} messages · v{1} · {2}",
   "status.syncScanned": "Found {0} subfolders",
 };

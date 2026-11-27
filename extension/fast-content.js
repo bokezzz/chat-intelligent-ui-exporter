@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.2.5';
+  const version='1.3.0';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -528,7 +528,7 @@
     text.textContent=(m.staticMd||m.md||m.summary||'').replace(/\u0000[^\u0000]*\u0000/g,'').replace(/\*\*|^#{1,6}\s+|^>\s?/gm,'').replace(/\s+/g,' ').trim().slice(0,600);
     body.append(top,text);label.append(box,body);return label;}
   // The sidebar's two views: the message list, and the settings (the toolbar panel's, in place).
-  const navIcons={obs:'gem',def:'archive',md:'file',name:'code',btns:'list',adv:'gear',guide:'info'};
+  const navIcons={obs:'gem',chats:'archive',def:'list',md:'file',name:'code',btns:'list',adv:'gear',guide:'info'};
   let activeSetTab='obs';
   function selectSetTab(key){
     activeSetTab=key||'obs';
@@ -541,6 +541,7 @@
       if(on)panelSettings.setOpen(acc.dataset.group,true);
     }
     for(const b of nav.querySelectorAll('button[data-nav]'))b.classList.toggle('on',b.dataset.nav===activeSetTab);
+    if(activeSetTab==='chats')renderSettingsChats();
   }
   function showView(view){const set=view==='settings';$('listView').hidden=set;$('setView').hidden=!set;$('back').hidden=!set;$('logo').hidden=set;$('reload').hidden=set;$('gear').hidden=set;$('sbTitle').textContent=set?t('side.settings'):t('side.title');
     if(set)selectSetTab(activeSetTab||'obs');}
@@ -719,7 +720,7 @@
     const bar=$('syncBar'),dWrap=D('dSyncWrap'),dBtn=D('dSync'),dAuto=D('dAuto');
     if(!bar||!AutoSync||!resident){if(bar)bar.hidden=true;if(dWrap)dWrap.hidden=true;return;}
     const info=syncStatusPayload();
-    if(!info.conversationId){bar.hidden=true;if(dWrap)dWrap.hidden=true;return;}
+    if(!info.conversationId){bar.hidden=true;if(dWrap)dWrap.hidden=true;renderSettingsCategories();renderSettingsChats();return;}
     bar.hidden=false;
     const sw=$('syncChat'),nowBtn=$('syncNow'),meta=$('syncMeta');
     const isGlobalAll=info.mode==='all';
@@ -767,6 +768,7 @@
       }
     }
     renderSettingsCategories();
+    renderSettingsChats();
   }
   function renderSettingsCategories(){
     const obsAcc=$('setMain')?.querySelector('.acc[data-group="obs"] .accb');
@@ -790,6 +792,74 @@
       const lab=document.createElement('span');lab.textContent=c;
       const del=document.createElement('button');del.type='button';del.textContent='×';del.onclick=async()=>{await syncStore.removeCategory(c);renderSettingsCategories();updateSyncBar();};
       chip.append(lab,del);list.append(chip);
+    }
+  }
+  let chatSearchQuery='';
+  function renderSettingsChats(){
+    const acc=$('setMain')?.querySelector('.acc[data-group="chats"] .accb');
+    if(!acc||!AutoSync||!syncStore)return;
+    let mgr=acc.querySelector('.chatmgr');
+    if(!mgr){
+      mgr=document.createElement('div');mgr.className='chatmgr';
+      mgr.innerHTML=`<div class="chatbar"><input id="setChatSearch" type="search" placeholder="${esc(t('set.chats.search'))}"><button class="xlink" id="setChatScan" type="button">${esc(t('set.syncCats.scan'))}</button></div><div class="chatlist" id="setChatList"></div>`;
+      acc.append(mgr);
+      mgr.querySelector('#setChatSearch').addEventListener('input',e=>{chatSearchQuery=e.target.value.trim().toLowerCase();renderSettingsChats();});
+      mgr.querySelector('#setChatScan').onclick=()=>{send({type:'obsidian:scan',base:cfg().autoSyncSubfolder||'ChatGPT-Raw'}).catch(e=>{if(resident)toast(e?.message||String(e));});};
+    }
+    const list=mgr.querySelector('#setChatList');
+    const base=cfg().autoSyncSubfolder||'ChatGPT-Raw';
+    const baseCats=syncStore.getCategories();
+    const stateMap=syncStore.snapshot.state||{};
+    const items=Object.entries(stateMap)
+      .filter(([,rec])=>rec&&rec.folderName)
+      .map(([cid,rec])=>({cid,rec,cat:syncStore.getChatCategory(cid)||rec.category||''}))
+      .filter(({cid,rec,cat})=>{
+        if(!chatSearchQuery)return true;
+        const hay=`${rec.title||''} ${rec.folderName||''} ${cat} ${cid}`.toLowerCase();
+        return hay.includes(chatSearchQuery);
+      })
+      .sort((a,b)=>(Date.parse(b.rec.syncedAt||b.rec.updatedAt||'')||0)-(Date.parse(a.rec.syncedAt||a.rec.updatedAt||'')||0));
+    const sig=JSON.stringify([base,baseCats,chatSearchQuery,items.map(x=>[x.cid,x.rec.title||x.rec.folderName,x.cat,x.rec.syncedAt,x.rec.syncVersion,x.rec.messageCount,x.rec.subfolder])]);
+    if(list.dataset.sig===sig)return;
+    list.dataset.sig=sig;
+    list.replaceChildren();
+    if(!items.length){
+      const empty=document.createElement('div');empty.className='chatempty';empty.textContent=t('set.chats.empty');
+      list.append(empty);return;
+    }
+    for(const {cid,rec,cat} of items){
+      const row=document.createElement('div');row.className='chatitem';
+      const info=document.createElement('div');info.className='chatinfo';
+      const a=document.createElement('a');a.className='chattitle';a.href=rec.sourceUrl||`https://chatgpt.com/c/${encodeURIComponent(cid)}`;a.target='_blank';a.rel='noopener noreferrer';
+      a.textContent=rec.title||rec.folderName||cid;a.title=a.textContent;
+      const meta=document.createElement('div');meta.className='chatmeta';
+      meta.textContent=t('set.chats.meta',rec.messageCount||0,rec.syncVersion||1,formatSyncTime(rec.syncedAt)||'-');
+      info.append(a,meta);
+      const sel=document.createElement('select');sel.className='fs';sel.setAttribute('aria-label',t('side.syncCatLabel'));
+      const cats=[...new Set([...baseCats,...(cat?[cat]:[])])].sort((x,y)=>x.localeCompare(y));
+      sel.innerHTML=`<option value="">${esc(t('side.syncCatRoot',base))}</option>`+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      sel.value=cat;
+      sel.addEventListener('change',async()=>{
+        const nextCat=sel.value;
+        const fromSub=rec.subfolder||AutoSync.resolveSubfolder(base,rec.category||'');
+        const toSub=AutoSync.resolveSubfolder(base,nextCat);
+        sel.disabled=true;
+        try{
+          await syncStore.setChatCategory(cid,nextCat);
+          if(fromSub!==toSub){
+            if(resident)toast(t('status.syncMigrating'),true);
+            await send({type:'obsidian:move',base,from:fromSub,to:toSub,folder:rec.folderName,cat:nextCat,cid});
+          }else if(resident){
+            toast(t('status.syncMigrated',toSub));
+          }
+        }catch(e){
+          if(resident)toast(e?.message||String(e));
+        }finally{
+          sel.disabled=false;
+        }
+      });
+      row.append(info,sel);
+      list.append(row);
     }
   }
   async function syncConversation(task){
@@ -853,6 +923,7 @@
     await syncStore.dequeuePersistent(conversationId);
     await syncStore.updateRecord(conversationId,{
       force:effectiveForce,status:'synced',folderName:written.folderName||existing?.folderName||'',
+      title:syncState.title||existing?.title||'',sourceUrl:syncState.url||existing?.sourceUrl||'',
       category,subfolder:targetSubfolder,
       contentHash,updatedAt,syncedAt:written.metadata?.synced_at||new Date().toISOString(),
       syncVersion:written.metadata?.sync_version||((existing?.syncVersion||0)+1),

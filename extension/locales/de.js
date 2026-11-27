@@ -589,5 +589,10 @@
   "set.syncCats.empty": "Noch keine — hier oder im Chat anlegen",
   "set.syncCats.count": "{0} Unterordner",
   "set.syncCats.scan": "Ordner scannen",
+    "set.chats": "Synchronisierte Chats",
+    "set.chats.summary": "Ordner aller synchronisierten Chats zentral verwalten",
+    "set.chats.search": "Synchronisierte Chats suchen…",
+    "set.chats.empty": "Noch keine synchronisierten Chats. Klicke auf „Ordner scannen“ oder synchronisiere zuerst einen Chat.",
+    "set.chats.meta": "{0} Nachrichten · v{1} · {2}",
   "status.syncScanned": "{0} Unterordner gefunden",
 };

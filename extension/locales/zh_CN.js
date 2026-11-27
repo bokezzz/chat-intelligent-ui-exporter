@@ -589,5 +589,10 @@
   "set.syncCats.empty": "暂无子目录，可在此或对话页新建",
   "set.syncCats.count": "{0} 个子目录",
   "set.syncCats.scan": "扫描目录",
+    "set.chats": "对话目录",
+    "set.chats.summary": "统一管理所有已同步对话的归档目录",
+    "set.chats.search": "搜索已同步对话…",
+    "set.chats.empty": "暂无已同步对话，点「扫描目录」加载或先同步一条对话",
+    "set.chats.meta": "{0} 条消息 · v{1} · {2}",
   "status.syncScanned": "已扫描到 {0} 个子目录",
 };

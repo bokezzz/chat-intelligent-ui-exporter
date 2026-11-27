@@ -589,5 +589,10 @@
   "set.syncCats.empty": "Nenhuma ainda — crie aqui ou em um chat",
   "set.syncCats.count": "{0} subpastas",
   "set.syncCats.scan": "Escanear pastas",
+    "set.chats": "Conversas sincronizadas",
+    "set.chats.summary": "Gerencie as pastas de todas as conversas sincronizadas",
+    "set.chats.search": "Pesquisar conversas sincronizadas…",
+    "set.chats.empty": "Nenhuma conversa sincronizada ainda. Clique em \"Escanear pastas\" ou sincronize uma conversa primeiro.",
+    "set.chats.meta": "{0} mensagens · v{1} · {2}",
   "status.syncScanned": "{0} subpastas encontradas",
 };

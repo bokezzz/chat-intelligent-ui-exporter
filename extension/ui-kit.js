@@ -50,6 +50,7 @@
       {key:'autoSyncAttachments',label:t('set.autoSyncAttachments'),value:onOff('set.on'),control:'switch'},
       {key:'autoSyncUi',label:t('set.autoSyncUi'),value:onOff('set.on'),control:'switch'},
     ]},
+    {key:'chats',title:t('set.chats'),summary:()=>t('set.chats.summary'),rows:[]},
     {key:'def',title:t('set.def'),summary:v=>`${kindLabel(v.exportKind)} · ${profileName(v)}`,rows:[
       {key:'exportKind',label:t('set.exportKind'),value:v=>kindLabel(v.exportKind),control:'select',options:kindOptions()},
       {key:'profile',label:t('set.profile'),tip:'profile',value:profileName,control:'seg',options:[['generic',t('set.profile.genericShort')],['obsidian','Obsidian']]},
@@ -305,6 +306,18 @@
 .catchip button:hover{color:var(--err)}
 .catadd{display:flex;gap:6px}
 .catadd input{flex:1;min-width:0;font-size:12px;border:1px solid color-mix(in srgb,var(--text) 26%,transparent);border-radius:6px;background:var(--surface);color:var(--text);padding:5px 8px}
+.chatmgr{padding:10px 14px 12px;display:flex;flex-direction:column;gap:10px}
+.chatbar{display:flex;gap:8px;align-items:center}
+.chatbar input{flex:1;min-width:0;font-size:12.5px;border:1px solid color-mix(in srgb,var(--text) 24%,transparent);border-radius:7px;background:var(--bg);color:var(--text);padding:6px 10px}
+.chatlist{display:flex;flex-direction:column;gap:6px}
+.chatitem{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:color-mix(in srgb,var(--bg) 45%,var(--surface))}
+.chatitem:hover{border-color:color-mix(in srgb,var(--pri) 42%,var(--line))}
+.chatinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.chattitle{font-size:13px;font-weight:500;color:var(--text);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chattitle:hover{color:var(--pri-deep);text-decoration:underline}
+.chatmeta{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chatitem select.fs{max-width:160px;flex:none}
+.chatempty{padding:24px 12px;text-align:center;color:var(--muted);font-size:12.5px}
 .syncmeta{font-size:11.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
 .syncmeta.warn{color:color-mix(in srgb,var(--warn) 80%,var(--text))}
 .syncmeta.err{color:color-mix(in srgb,var(--err) 75%,var(--text))}

@@ -589,5 +589,10 @@
   "set.syncCats.empty": "まだありません（ここか会話画面で作成可能）",
   "set.syncCats.count": "{0} 個のサブフォルダ",
   "set.syncCats.scan": "フォルダをスキャン",
+    "set.chats": "同期済みチャット",
+    "set.chats.summary": "同期済みチャットの保存先フォルダを一括管理",
+    "set.chats.search": "同期済みチャットを検索…",
+    "set.chats.empty": "同期済みチャットはまだありません。「フォルダをスキャン」するか先に同期してください",
+    "set.chats.meta": "{0} 件のメッセージ · v{1} · {2}",
   "status.syncScanned": "{0} 個のサブフォルダを検出しました",
 };

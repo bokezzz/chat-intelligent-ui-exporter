@@ -589,5 +589,10 @@
   "set.syncCats.empty": "아직 없음 — 여기나 대화 창에서 추가하세요",
   "set.syncCats.count": "{0}개 하위 폴더",
   "set.syncCats.scan": "폴더 스캔",
+    "set.chats": "동기화된 대화",
+    "set.chats.summary": "동기화된 모든 대화의 저장 폴더를 한곳에서 관리",
+    "set.chats.search": "동기화된 대화 검색…",
+    "set.chats.empty": "동기화된 대화가 아직 없습니다. \"폴더 스캔\"을 누르거나 먼저 동기화하세요",
+    "set.chats.meta": "메시지 {0}개 · v{1} · {2}",
   "status.syncScanned": "{0}개 하위 폴더를 찾았습니다",
 };
