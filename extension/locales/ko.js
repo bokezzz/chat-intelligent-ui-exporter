@@ -566,8 +566,8 @@
   "side.syncNowTip": "현재 대화를 지금 Obsidian에 수동 저장 (자동 동기화가 꺼져 있어도 동작)",
   "set.autoSyncMode": "자동 동기화 모드",
   "set.autoSyncMode.off": "꺼짐 · 지금 동기화로 수동 저장만",
-  "set.autoSyncMode.selected": "선택만 · 켠 대화만 자동 동기화",
+  "set.autoSyncMode.selected": "대화별 · 입력창 옆 \"선택\"을 누르고 상단의 \"이 대화 자동 동기화\"를 켜세요",
   "set.autoSyncMode.all": "전체 · 열린 모든 대화 응답 후 자동 동기화",
-  "set.autoSyncMode.selectedShort": "선택만",
+  "set.autoSyncMode.selectedShort": "대화별",
   "set.autoSyncMode.allShort": "전체",
 };

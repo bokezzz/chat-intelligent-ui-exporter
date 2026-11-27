@@ -566,8 +566,8 @@
   "side.syncNowTip": "Diesen Chat jetzt manuell synchronisieren (auch wenn Auto-Sync aus ist)",
   "set.autoSyncMode": "Auto-Sync-Modus",
   "set.autoSyncMode.off": "Aus · Nur manuelles Synchronisieren",
-  "set.autoSyncMode.selected": "Markierte · Nur aktivierte Chats sichern",
+  "set.autoSyncMode.selected": "Pro Chat · Neben dem Eingabefeld auf „Auswählen“ klicken und oben „Diesen Chat automatisch synchronisieren“ aktivieren",
   "set.autoSyncMode.all": "Alle · Jeden geöffneten Chat automatisch sichern",
-  "set.autoSyncMode.selectedShort": "Markierte",
+  "set.autoSyncMode.selectedShort": "Pro Chat",
   "set.autoSyncMode.allShort": "Alle",
 };

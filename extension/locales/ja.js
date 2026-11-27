@@ -566,8 +566,8 @@
   "side.syncNowTip": "現在の会話を手動で今すぐ Obsidian へ差分保存（自動同期オフでも利用可能）",
   "set.autoSyncMode": "自動同期モード",
   "set.autoSyncMode.off": "オフ · 「今すぐ同期」による手動保存のみ",
-  "set.autoSyncMode.selected": "選択のみ · オンにした会話だけ自動同期",
+  "set.autoSyncMode.selected": "会話ごと · 入力欄横の「選択」を押し、上部の「この会話を自動同期」をオンにする",
   "set.autoSyncMode.all": "すべて · 開いた会話を応答ごとに自動同期",
-  "set.autoSyncMode.selectedShort": "選択のみ",
+  "set.autoSyncMode.selectedShort": "会話ごと",
   "set.autoSyncMode.allShort": "すべて",
 };

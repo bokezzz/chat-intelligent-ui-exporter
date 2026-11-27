@@ -44,7 +44,7 @@
     {key:'obs',title:'Obsidian',summary:v=>v.obsidianFolder?(v.autoSyncMode!=='off'?t('set.obs.syncOn',v.obsidianFolder):t('set.obs.summary',v.obsidianFolder)):t('set.obs.none'),rows:[
       {key:'obsFolder',label:t('set.obsFolder'),tip:'obs',value:v=>v.obsidianFolder?`${v.obsidianFolder} /`:t('set.obsFolder.none'),chip:v=>!!v.obsidianFolder,control:'button',text:t('set.obsFolder.button')},
       {key:'autoSyncSubfolder',label:t('set.autoSyncSubfolder'),value:v=>v.autoSyncSubfolder||'ChatGPT-Raw',mono:true,control:'text',width:130},
-      {key:'autoSyncMode',label:t('set.autoSyncMode'),value:v=>v.autoSyncMode==='all'?t('set.autoSyncMode.all'):v.autoSyncMode==='selected'?t('set.autoSyncMode.selected'):t('set.autoSyncMode.off'),control:'seg',options:[['off',t('set.off')],['selected',t('set.autoSyncMode.selectedShort')],['all',t('set.autoSyncMode.allShort')]]},
+      {key:'autoSyncMode',label:t('set.autoSyncMode'),value:v=>v.autoSyncMode==='all'?t('set.autoSyncMode.all'):v.autoSyncMode==='selected'?t('set.autoSyncMode.selected'):t('set.autoSyncMode.off'),wrap:true,control:'seg',options:[['off',t('set.off')],['selected',t('set.autoSyncMode.selectedShort')],['all',t('set.autoSyncMode.allShort')]]},
       {key:'autoSyncPrismCards',label:t('set.autoSyncPrismCards'),value:onOff('set.autoSyncPrismCards.on'),control:'switch'},
       {key:'autoSyncImages',label:t('set.autoSyncImages'),value:onOff('set.on'),control:'switch'},
       {key:'autoSyncAttachments',label:t('set.autoSyncAttachments'),value:onOff('set.on'),control:'switch'},

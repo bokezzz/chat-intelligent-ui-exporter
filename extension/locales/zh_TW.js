@@ -566,8 +566,8 @@
   "side.syncNowTip": "手動將目前對話立即增量寫入 Obsidian（關閉自動同步時也可用）",
   "set.autoSyncMode": "自動同步模式",
   "set.autoSyncMode.off": "關 · 僅透過「立即同步」手動寫入",
-  "set.autoSyncMode.selected": "僅標記 · 僅自動同步開啟開關的對話",
+  "set.autoSyncMode.selected": "依對話 · 在對話頁點輸入框旁「選擇」→ 頂部開啟「自動同步此對話」",
   "set.autoSyncMode.all": "全部 · 所有開啟的對話回覆完自動同步",
-  "set.autoSyncMode.selectedShort": "僅標記",
+  "set.autoSyncMode.selectedShort": "依對話",
   "set.autoSyncMode.allShort": "全部",
 };

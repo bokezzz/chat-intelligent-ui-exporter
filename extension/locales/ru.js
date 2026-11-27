@@ -566,8 +566,8 @@
   "side.syncNowTip": "Синхронизировать этот чат вручную сейчас (работает даже при выключенной автосинхронизации)",
   "set.autoSyncMode": "Режим автосинхронизации",
   "set.autoSyncMode.off": "Выкл. · Только ручная синхронизация",
-  "set.autoSyncMode.selected": "Отмеченные · Только включённые чаты",
+  "set.autoSyncMode.selected": "По чатам · Нажмите «Выбрать» рядом с полем ввода и включите «Автосинхронизация этого чата» сверху",
   "set.autoSyncMode.all": "Все · Синхронизировать каждый открытый чат",
-  "set.autoSyncMode.selectedShort": "Отмеченные",
+  "set.autoSyncMode.selectedShort": "По чатам",
   "set.autoSyncMode.allShort": "Все",
 };

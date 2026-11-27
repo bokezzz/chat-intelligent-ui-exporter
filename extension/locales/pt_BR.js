@@ -566,8 +566,8 @@
   "side.syncNowTip": "Sincronizar este chat manualmente agora (funciona mesmo com a sincronização automática desativada)",
   "set.autoSyncMode": "Modo de sincronização automática",
   "set.autoSyncMode.off": "Desativado · Apenas sincronização manual",
-  "set.autoSyncMode.selected": "Marcados · Apenas chats ativados",
+  "set.autoSyncMode.selected": "Por chat · Clique em \"Selecionar\" ao lado da caixa de texto e ative \"Sincronizar este chat\" no topo",
   "set.autoSyncMode.all": "Todos · Sincroniza todos os chats abertos",
-  "set.autoSyncMode.selectedShort": "Marcados",
+  "set.autoSyncMode.selectedShort": "Por chat",
   "set.autoSyncMode.allShort": "Todos",
 };

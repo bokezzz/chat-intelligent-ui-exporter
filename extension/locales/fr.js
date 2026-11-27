@@ -566,8 +566,8 @@
   "side.syncNowTip": "Synchroniser cette discussion maintenant (fonctionne même si la synchro auto est désactivée)",
   "set.autoSyncMode": "Mode de synchronisation auto",
   "set.autoSyncMode.off": "Désactivé · Synchronisation manuelle uniquement",
-  "set.autoSyncMode.selected": "Marquées · Uniquement les discussions activées",
+  "set.autoSyncMode.selected": "Par chat · Cliquez sur « Sélectionner » près du champ et activez « Synchroniser cette discussion » en haut",
   "set.autoSyncMode.all": "Toutes · Synchronise chaque discussion ouverte",
-  "set.autoSyncMode.selectedShort": "Marquées",
+  "set.autoSyncMode.selectedShort": "Par chat",
   "set.autoSyncMode.allShort": "Toutes",
 };

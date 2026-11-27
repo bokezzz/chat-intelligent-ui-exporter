@@ -580,8 +580,8 @@
   "side.syncNowTip": "Sync this chat to Obsidian archive now (works even when auto-sync is off)",
   "set.autoSyncMode": "Auto-sync mode",
   "set.autoSyncMode.off": "Off · Manual Sync now only",
-  "set.autoSyncMode.selected": "Marked · Auto-sync only chats toggled on",
+  "set.autoSyncMode.selected": "Per chat · Click \"Select\" beside the input box and toggle \"Auto-sync this chat\" at the top",
   "set.autoSyncMode.all": "All · Auto-sync every opened chat",
-  "set.autoSyncMode.selectedShort": "Marked",
+  "set.autoSyncMode.selectedShort": "Per chat",
   "set.autoSyncMode.allShort": "All",
 };
