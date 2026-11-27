@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.8';
+  const version='1.1.9';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -33,7 +33,7 @@
   let state=null,busyFlag=false,generation=0,controller,readRoute=null;
   const htmlCards=()=>cfg().htmlCards,escapeProseHtml=()=>cfg().proseHtml==='escape';
   // A saved chat (/c/id) or a shared link (/share/id), which has its own read endpoint.
-  const target=()=>{const share=location.pathname.match(/\/share\/([^/]+)/)?.[1];return share?{id:share,share:true}:{id:location.pathname.match(/\/c\/([^/]+)/)?.[1],share:false};};
+  const target=()=>{if(typeof location==='undefined')return {id:undefined,share:false};const share=location.pathname.match(/\/share\/([^/]+)/)?.[1];return share?{id:share,share:true}:{id:location.pathname.match(/\/c\/([^/]+)/)?.[1],share:false};};
   // Since 2026-11 ChatGPT keeps chats opened before in the page under a display:none wrapper (no hidden or
   // aria-hidden), each with its own messages and input box; a project chat opened by its /c/ link even
   // leaves a hidden copy of itself. Only what is rendered belongs to the chat on screen.

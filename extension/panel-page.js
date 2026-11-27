@@ -37,12 +37,13 @@
   if(popup)[tab]=await chrome.tabs.query({active:true,currentWindow:true});
   const chatTab=t=>/^https:\/\/(chatgpt\.com|chat\.openai\.com)\//.test(t?.url||'');
   async function call(message,target=tab){
+    if(!target?.id)throw Error(t('panel.needChat'));
     try{const r=await chrome.tabs.sendMessage(target.id,message);if(r!==undefined)return r;}catch{}
     await chrome.scripting.executeScript({target:{tabId:target.id},files:chrome.runtime.getManifest().content_scripts[0].js});
     return chrome.tabs.sendMessage(target.id,message);
   }
   // On ChatGPT tabs, clicking the toolbar icon opens the centered square settings modal directly.
-  if(popup&&chatTab(tab)&&location.hostname!=='x'){
+  if(popup&&chatTab(tab)&&tab?.id&&location.hostname!=='x'){
     try{await call({type:'panel:toggle',view:'settings'});window.close();return;}catch{}
   }
   // 导出原始 JSON from the settings tab goes to the ChatGPT tab used last.
@@ -66,7 +67,7 @@
   function drawHero(){
     if(!chatTab(tab)||summary?.page==='other'){
       hero.innerHTML=`<div class="xk">${esc(t('panel.thisTab'))}</div><div class="xt">${esc(t('panel.notChat'))}</div><div class="xm">${esc(t('panel.notChatHint'))}</div><div class="xbtns"><button class="xb ghost" id="openChat" type="button">${icon('ext')}${esc(t('panel.openChatGPT'))}</button></div>`;
-      $('openChat').onclick=()=>{if(chatTab(tab))chrome.tabs.update(tab.id,{url:'https://chatgpt.com/'});else chrome.tabs.create({url:'https://chatgpt.com/'});window.close();};return;}
+      $('openChat').onclick=()=>{if(chatTab(tab)&&tab?.id)chrome.tabs.update(tab.id,{url:'https://chatgpt.com/'});else chrome.tabs.create({url:'https://chatgpt.com/'});window.close();};return;}
     const k=store.values.exportKind,meta=!summary?t('panel.reading'):summary.ok?[t('count.messages',summary.messages),summary.cards&&t('count.cards',summary.cards),summary.images&&t('count.images',summary.images)].filter(Boolean).join(' · '):summary.status;
     // When one HTML file would carry many pictures and files, that line is instead the suggestion to
     // use ZIP, which switches when clicked: still one line, so the buttons below do not move.
@@ -114,11 +115,11 @@
   };
   store.onChange((v,changed)=>{if(changed.includes('exportKind')||changed.includes('htmlForm'))drawHero();if(changed.some(k=>k.startsWith('autoSync')))drawSync();});
   drawHero();
-  if(chatTab(tab))try{
+  if(chatTab(tab)&&tab?.id)try{
     summary=await call({type:'panel:summary'});
     if(summary?.error){say(summary.error,true);summary=null;}
     // The page keeps the script it loaded with; after a reload of the extension it needs a refresh.
-    else if(summary&&summary.version!==loaded&&!stale)warnWith(t('panel.pageStale',bold(summary.version),bold(loaded)),t('panel.reloadPage'),()=>{chrome.tabs.reload(tab.id);window.close();});
+    else if(summary&&summary.version!==loaded&&!stale)warnWith(t('panel.pageStale',bold(summary.version),bold(loaded)),t('panel.reloadPage'),()=>{if(tab?.id)chrome.tabs.reload(tab.id);window.close();});
     try{syncInfo=await call({type:'sync:status'});}catch{}
     drawHero();drawSync();panel.refresh();
   }catch(e){say(t('panel.cannotConnect',e.message),true);}
