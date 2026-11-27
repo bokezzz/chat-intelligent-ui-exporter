@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.1';
+  const version='1.1.2';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -248,9 +248,7 @@
         const viz=dilRender.prismVizBlock({dil:{...m.dil,contentReferences:m.contentReferences},card:idx,images:m.cardPictures||{},title:t('md.card')});
         if(viz){
           cards.push({messageId:m.id,card:++n,layout:'prism'});
-          const words=s.md.replace(/!\[[^\]]*\]\(([^)\s]+)\) ?/g,(x,u)=>m.drawnImages?.has(u)?'':x).replace(/\n{3,}/g,'\n\n').trim();
-          const text=words?`\n\n> [!note]- ${t('md.cardText')}\n${words.split('\n').map(l=>l?`> ${l}`:'>').join('\n')}`:'';
-          return `${viz}${text}`;
+          return viz;
         }
       }catch(e){fallback=e?.message||String(e);}
     }
@@ -300,11 +298,12 @@
       // text, no picture), ChatGPT's fallback text stands in.
       const fallbackText=escapeProseHtml()||pdf?original.mdEscaped??original.md:original.md;
       const withCards=zip&&saveUi&&original.segments&&(original.staticMd||original.segments.some(s=>s.kind==='card'));
-      const text=withCards?((html?htmlSegments(original):await cardMarkdown(original,assets,warnings,cards,pdf,mode==='obsidian'&&!!cfg().autoSyncPrismCards)).trim()||fallbackText):original.staticMd||fallbackText;
+      const usePrism=mode==='obsidian'&&!!cfg().autoSyncPrismCards;
+      const text=withCards?((html?htmlSegments(original):await cardMarkdown(original,assets,warnings,cards,pdf,usePrism)).trim()||fallbackText):original.staticMd||fallbackText;
       const md=!original.staticMd&&original.rescuedMd?`${text}\n\n${original.rescuedMd}`:text;
       // Components added by ChatGPT after this version: their text is kept, and the note says which ones.
       if(original.unknownComponents?.length)warnings.push(`${original.id}: ${t('warn.unknownComponents',original.unknownComponents.join(', '))}`);
-      if(original.dil?.code&&!original.staticMd&&original.renderError)warnings.push(`${original.id}: ${t(original.rescuedMd?'warn.renderRescued':'warn.renderFailed',original.renderError)}`);      messages.push({...original,md:withVariants(original,md).replace(/!\[[^\]]*\]\(assets\/(?!card-)[^)]+\)/g,'')});
+      if(original.dil?.code&&!original.staticMd&&original.renderError)warnings.push(`${original.id}: ${t(original.rescuedMd?'warn.renderRescued':'warn.renderFailed',original.renderError)}`);      messages.push({...original,md:(usePrism?md:withVariants(original,md)).replace(/!\[[^\]]*\]\(assets\/(?!card-)[^)]+\)/g,'')});
     }
     if(zip)await attachData(messages,assets,warnings,html,{stateOverride:cur,signal:opts?.signal,silent:!!opts?.silent,saveImages,saveAttachments,saveUi});
     // Only the text: what the ZIP would hold is named where it was.
