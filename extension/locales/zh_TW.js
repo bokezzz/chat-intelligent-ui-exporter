@@ -570,4 +570,12 @@
   "set.autoSyncMode.all": "全部 · 所有開啟的對話回覆完自動同步",
   "set.autoSyncMode.selectedShort": "依對話",
   "set.autoSyncMode.allShort": "全部",
+  "set.guide": "使用指南",
+  "set.guide.summary": "快速上手、按鈕說明與歸檔結構",
+  "set.guide.quick": "1. 快速上手",
+  "set.guide.quickBody": "在「Obsidian」分組點「更改…」選擇你的 Vault 資料夾，並在瀏覽器提示中選「每次造訪時都允許」；接著選擇「自動同步模式」（關 / 依對話 / 全部）。若 Obsidian 已安裝 Prism 外掛，可開啟「以 Prism 渲染互動卡片（viz）」。",
+  "set.guide.buttons": "2. 輸入框旁按鈕說明",
+  "set.guide.buttonsBody": "「↻ 立即同步 | ●」：點左側立刻增量寫入原始對話資料夾（原地更新、不建副本）；點右側圓點一鍵開關目前對話的自動同步（綠=開，黃=同步中，紅=需授權，灰=關）。\n「選擇 ▾」：勾選部分訊息匯出，或查看目前對話同步狀態。\n「◆ 儲存 | ▾」：依所選格式（MD / ZIP / HTML / PDF / Obsidian）一次性手動匯出。",
+  "set.guide.layout": "3. Obsidian 目錄與 Agent 對接",
+  "set.guide.layoutBody": "自動同步與「立即同步」統一寫入 <Vault>/<子資料夾>/<標題 (ID)>/，包含 conversation.md（完整原始對話）、metadata.json（含對話 ID、更新時間、同步版本與內容雜湊，供外部 Agent 增量辨識）以及 assets/、ui/、files/ 資源目錄。",
 };

@@ -570,4 +570,12 @@
   "set.autoSyncMode.all": "Todos · Sincroniza cada chat abierto",
   "set.autoSyncMode.selectedShort": "Por chat",
   "set.autoSyncMode.allShort": "Todos",
+  "set.guide": "Guía de uso",
+  "set.guide.summary": "Inicio rápido, botones y estructura del archivo",
+  "set.guide.quick": "1. Inicio rápido",
+  "set.guide.quickBody": "En \"Obsidian\", pulsa \"Cambiar...\" para elegir tu bóveda y selecciona \"Permitir en cada visita\". Luego elige el modo de sincronización automática (Desactivado / Por chat / Todos). Si usas Prism en Obsidian, activa \"Tarjetas interactivas con Prism (viz)\".",
+  "set.guide.buttons": "2. Botones junto al cuadro de texto",
+  "set.guide.buttonsBody": "\"Sincronizar | punto\": Clic izquierdo para guardar este chat de forma incremental sin duplicados. Clic en el punto derecho para activar/desactivar la sincronización automática de este chat (verde=activo, ámbar=sincronizando, rojo=permiso, gris=apagado).\n\"Seleccionar\": Elegir mensajes específicos o ver el estado.\n\"Guardar / Exportar\": Exportación manual puntual en el formato elegido.",
+  "set.guide.layout": "3. Estructura en Obsidian y para Agents",
+  "set.guide.layoutBody": "La sincronización escribe en <Vault>/<Subcarpeta>/<Título (ID)>/ con conversation.md, metadata.json (conversation_id, updated_at, sync_version, content_hash) y las carpetas assets/, ui/ y files/.",
 };

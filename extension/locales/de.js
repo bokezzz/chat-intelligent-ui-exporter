@@ -570,4 +570,12 @@
   "set.autoSyncMode.all": "Alle · Jeden geöffneten Chat automatisch sichern",
   "set.autoSyncMode.selectedShort": "Pro Chat",
   "set.autoSyncMode.allShort": "Alle",
+  "set.guide": "Anleitung",
+  "set.guide.summary": "Schnellstart, Schaltflächen und Ordnerstruktur",
+  "set.guide.quick": "1. Schnellstart",
+  "set.guide.quickBody": "Wähle unter „Obsidian“ über „Ändern…“ deinen Vault-Ordner und bestätige im Browser mit „Bei jedem Besuch zulassen“. Wähle dann den Auto-Sync-Modus (Aus / Pro Chat / Alle). Mit dem Prism-Plugin in Obsidian kannst du „Interaktive Karten per Prism (viz)“ aktivieren.",
+  "set.guide.buttons": "2. Schaltflächen neben dem Eingabefeld",
+  "set.guide.buttonsBody": "„Jetzt synchronisieren | Punkt“: Links klicken für sofortiges inkrementelles Speichern ohne Duplikate. Rechts auf den Punkt klicken, um Auto-Sync für diesen Chat umzuschalten (Grün=An, Gelb=Läuft, Rot=Zugriff nötig, Grau=Aus).\n„Auswählen“: Einzelne Nachrichten wählen oder Status prüfen.\n„Speichern / Exportieren“: Einmaliger manueller Export im gewählten Format.",
+  "set.guide.layout": "3. Obsidian-Struktur & Agent-Anbindung",
+  "set.guide.layoutBody": "Sync schreibt nach <Vault>/<Unterordner>/<Titel (ID)>/ mit conversation.md, metadata.json (conversation_id, updated_at, sync_version, content_hash) sowie assets/, ui/ und files/.",
 };

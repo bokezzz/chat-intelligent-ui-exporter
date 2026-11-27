@@ -584,4 +584,12 @@
   "set.autoSyncMode.all": "All · Auto-sync every opened chat",
   "set.autoSyncMode.selectedShort": "Per chat",
   "set.autoSyncMode.allShort": "All",
+  "set.guide": "Guide",
+  "set.guide.summary": "Quick start, buttons and archive layout",
+  "set.guide.quick": "1. Quick start",
+  "set.guide.quickBody": "In \"Obsidian\", click \"Change...\" to pick your vault folder and choose \"Allow on every visit\" in the browser prompt. Then pick an Auto-sync mode (Off / Per chat / All). If you use the Obsidian Prism plugin, turn on \"Interactive cards via Prism (viz)\".",
+  "set.guide.buttons": "2. Floating buttons beside the input",
+  "set.guide.buttonsBody": "\"Sync now | dot\": Click left to write the current chat incrementally into the raw archive folder (updates in place, no duplicates). Click the right dot to toggle auto-sync for this chat (green = on, amber = syncing, red = permission needed, grey = off).\n\"Select\": Pick specific messages to export or check sync status.\n\"Save / Export\": One-off manual export in the chosen format (MD / ZIP / HTML / PDF / Obsidian).",
+  "set.guide.layout": "3. Obsidian archive & Agent structure",
+  "set.guide.layoutBody": "Auto-sync and \"Sync now\" write to <Vault>/<Subfolder>/<Title (ID)>/ with conversation.md (full chat), metadata.json (conversation_id, updated_at, sync_version, content_hash for incremental external agents), plus assets/, ui/ and files/.",
 };

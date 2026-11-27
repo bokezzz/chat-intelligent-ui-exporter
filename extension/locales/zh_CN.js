@@ -570,4 +570,12 @@
   "set.autoSyncMode.all": "全部 · 所有打开的对话回答完自动同步",
   "set.autoSyncMode.selectedShort": "按对话",
   "set.autoSyncMode.allShort": "全部",
+  "set.guide": "使用指南",
+  "set.guide.summary": "快速上手、按钮区别与归档结构",
+  "set.guide.quick": "1. 快速上手",
+  "set.guide.quickBody": "在「Obsidian」分组点「更改…」选择你的 Vault 目录，并在浏览器弹窗中选「每次访问时都允许」；然后选择「自动同步模式」（关 / 按对话 / 全部）。若 Obsidian 已安装 Prism 插件，可开启「用 Prism 渲染交互卡片（viz）」。",
+  "set.guide.buttons": "2. 输入框旁按钮说明",
+  "set.guide.buttonsBody": "「↻ 立即同步 | ●」：点左侧立刻增量写入原始对话目录（原地更新、不建副本）；点右侧圆点一键开关当前对话的自动同步（绿灯=开，黄灯=同步中，红灯=需授权，灰灯=关）。\n「选择 ▾」：勾选部分消息导出，或查看当前对话同步详情。\n「◆ 保存 | ▾」：按所选格式（MD / ZIP / HTML / PDF / Obsidian）一次性手动导出。",
+  "set.guide.layout": "3. Obsidian 目录与 Agent 对接",
+  "set.guide.layoutBody": "自动同步与「立即同步」统一写入 <Vault>/<子目录>/<标题 (ID)>/，包含 conversation.md（完整原始对话）、metadata.json（含对话 ID、更新时间、同步版本与内容哈希，供外部 Agent 增量识别）以及 assets/、ui/、files/ 资源目录。",
 };

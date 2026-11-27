@@ -570,4 +570,12 @@
   "set.autoSyncMode.all": "전체 · 열린 모든 대화 응답 후 자동 동기화",
   "set.autoSyncMode.selectedShort": "대화별",
   "set.autoSyncMode.allShort": "전체",
+  "set.guide": "사용 가이드",
+  "set.guide.summary": "빠른 시작, 버튼 설명 및 저장 구조",
+  "set.guide.quick": "1. 빠른 시작",
+  "set.guide.quickBody": "\"Obsidian\"에서 \"변경…\"을 눌러 Vault 폴더를 선택하고 브라우저 권한 창에서 \"항상 허용\"을 선택하세요. 그다음 자동 동기화 모드(꺼짐 / 대화별 / 전체)를 고르고, Prism 플러그인을 쓰면 \"Prism (viz) 대화형 카드 사용\"을 켜세요.",
+  "set.guide.buttons": "2. 입력창 옆 버튼 설명",
+  "set.guide.buttonsBody": "\"지금 동기화 | ●\": 왼쪽을 누르면 현재 대화를 즉시 증분 저장(덮어쓰기, 중복 없음). 오른쪽 점을 누르면 이 대화의 자동 동기화를 바로 켜고 끕니다(초록=켜짐, 노랑=동기화 중, 빨강=권한 필요, 회색=꺼짐).\n\"선택\": 일부 메시지만 골라 내보내거나 동기화 상태 확인.\n\"저장 / 내보내기\": 선택한 형식(MD / ZIP / HTML / PDF / Obsidian)으로 1회 수동 내보내기.",
+  "set.guide.layout": "3. Obsidian 폴더 및 Agent 연동 구조",
+  "set.guide.layoutBody": "자동 동기화와 \"지금 동기화\"는 <Vault>/<하위 폴더>/<제목 (ID)>/ 아래에 conversation.md, metadata.json(대화 ID, 수정 시각, 동기화 버전, 콘텐츠 해시), assets/, ui/, files/를 저장합니다.",
 };

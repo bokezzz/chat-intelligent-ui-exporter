@@ -87,6 +87,11 @@
       {key:'raw',label:t('set.raw'),value:()=>t('set.raw.value'),control:'button',text:t('set.raw.button')},
       {key:'reset',label:t('set.reset'),value:()=>t('set.reset.value'),control:'button',text:t('set.reset.button')},
     ]},
+    {key:'guide',title:t('set.guide'),summary:()=>t('set.guide.summary'),rows:[
+      {key:'guideQuick',label:t('set.guide.quick'),value:()=>t('set.guide.quickBody'),wrap:true,note:true,control:'note'},
+      {key:'guideButtons',label:t('set.guide.buttons'),value:()=>t('set.guide.buttonsBody'),wrap:true,note:true,control:'note'},
+      {key:'guideLayout',label:t('set.guide.layout'),value:()=>t('set.guide.layoutBody'),wrap:true,note:true,control:'note'},
+    ]},
   ];
   // Obsidian writes into its 笔记文件夹, not 下载: the row is greyed out and says so while it is the kind.
   const saveRow=()=>({key:'saveAs',label:t('set.saveAs'),tip:'saveAs',dim:v=>v.exportKind==='obsidian',value:(v,ctx,own)=>v.exportKind==='obsidian'?t('set.saveAs.obsidian'):own?t('set.saveAs.on'):t('set.saveAs.off'),control:'switch'});
@@ -106,12 +111,13 @@
     if(row.control==='select'){const el=doc.createElement('select');el.className='fs';el.id=row.key;el.setAttribute('aria-label',row.label);el.innerHTML=row.options.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');return el;}
     if(row.control==='text'){const el=doc.createElement('input');el.className='rn';el.id=row.key;el.maxLength=40;el.style.width=(row.width||84)+'px';el.setAttribute('aria-label',row.label);return el;}
     if(row.control==='roles'){const el=doc.createElement('span');el.className='roles';el.innerHTML=`<input class="rn" id="roleUser" maxlength="40" style="width:64px" placeholder="${esc(t('md.roleUser'))}" aria-label="${esc(t('set.roles.user'))}"><input class="rn" id="roleAssistant" maxlength="40" style="width:84px" placeholder="ChatGPT" aria-label="${esc(t('set.roles.assistant'))}">`;return el;}
+    if(row.control==='note')return null;
     const el=doc.createElement('button');el.type='button';el.className='xlink';el.id=row.key;el.textContent=row.text;return el;
   }
   function rowElement(doc,row,ctx){
-    const el=doc.createElement('div');el.className=`xrow${row.dep?' dep':''}`;el.dataset.row=row.key;
+    const el=doc.createElement('div');el.className=`xrow${row.dep?' dep':''}${row.note?' note':''}`;el.dataset.row=row.key;
     el.innerHTML=`<div class="lab"><b>${esc(row.label)}${row.beta?' <span class="beta">Beta</span>':''}${row.tip?info(row.tip,row.help):''}</b>${row.value?`<span class="val${row.mono?' mono':''}${row.wrap?' wrap':''}"></span>`:''}</div>`;
-    el.append(control(doc,row,ctx));return el;
+    const ctrl=control(doc,row,ctx);if(ctrl)el.append(ctrl);return el;
   }
 
   // Draws the settings into container and keeps them in step with the store.
@@ -227,6 +233,8 @@
 .cx .xrow .lab>span{display:block;font-size:12px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cx .xrow .lab>span.mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px}
 .xrow .lab>span.wrap{white-space:normal;overflow-wrap:anywhere}
+.cx .xrow.note{align-items:flex-start;padding-top:10px;padding-bottom:10px}
+.cx .xrow.note .lab>span.wrap{white-space:pre-line;line-height:1.65;margin-top:4px;color:var(--text);opacity:.86}
 .cx .xrow .lab>span.chip{display:inline-block;max-width:100%;box-sizing:border-box;color:var(--text);margin-top:3px;font-size:12px}
 .cx .xrow.link{cursor:pointer;user-select:none}
 .cx .xrow.link:hover{background:color-mix(in srgb,var(--text) 4%,transparent)}

@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.13';
+  const version='1.1.14';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -528,7 +528,7 @@
     text.textContent=(m.staticMd||m.md||m.summary||'').replace(/\u0000[^\u0000]*\u0000/g,'').replace(/\*\*|^#{1,6}\s+|^>\s?/gm,'').replace(/\s+/g,' ').trim().slice(0,600);
     body.append(top,text);label.append(box,body);return label;}
   // The sidebar's two views: the message list, and the settings (the toolbar panel's, in place).
-  const navIcons={obs:'gem',def:'archive',md:'file',name:'code',btns:'list',adv:'gear'};
+  const navIcons={obs:'gem',def:'archive',md:'file',name:'code',btns:'list',adv:'gear',guide:'info'};
   let activeSetTab='obs';
   function selectSetTab(key){
     activeSetTab=key||'obs';

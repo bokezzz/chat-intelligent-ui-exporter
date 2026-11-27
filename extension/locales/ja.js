@@ -570,4 +570,12 @@
   "set.autoSyncMode.all": "すべて · 開いた会話を応答ごとに自動同期",
   "set.autoSyncMode.selectedShort": "会話ごと",
   "set.autoSyncMode.allShort": "すべて",
+  "set.guide": "使い方ガイド",
+  "set.guide.summary": "初期設定、ボタンの違い、保存構成",
+  "set.guide.quick": "1. クイックスタート",
+  "set.guide.quickBody": "「Obsidian」で「変更…」を押し、Vault フォルダを選択してブラウザ確認で「常に許可」を選びます。次に「自動同期モード」（オフ / 会話ごと / すべて）を選択し、Prism プラグイン利用時は「Prism (viz) で対話カードを表示」をオンにしてください。",
+  "set.guide.buttons": "2. 入力欄横のボタン",
+  "set.guide.buttonsBody": "「今すぐ同期 | ●」：左クリックで現在の会話を即時差分保存（重複作成なし）。右の丸点クリックでこの会話の自動同期を切替（緑=オン、黄=同期中、赤=要権限、灰=オフ）。\n「選択」：一部メッセージを選んでエクスポートや同期状態を確認。\n「保存 / エクスポート」：選択形式（MD / ZIP / HTML / PDF / Obsidian）で手動エクスポート。",
+  "set.guide.layout": "3. Obsidian 構成と Agent 連携",
+  "set.guide.layoutBody": "自動同期と「今すぐ同期」は <Vault>/<サブフォルダ>/<タイトル (ID)>/ に conversation.md、metadata.json（ID・更新日時・同期版数・ハッシュ）、assets/、ui/、files/ を保存します。",
 };
