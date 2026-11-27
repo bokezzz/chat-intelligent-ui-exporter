@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.5';
+  const version='1.1.6';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -800,7 +800,7 @@
     const respond=p=>{p.then(reply,e=>reply({error:e?.message||String(e)}));return true;};
     if(m?.type==='panel:summary')return respond(summary());
     if(m?.type==='panel:open'){openSidebar(m.view);reply({ok:true});return;}
-    if(m?.type==='panel:toggle'){if(host.hidden)openSidebar();else closeSidebar();reply({ok:true});return;}
+    if(m?.type==='panel:toggle'){if(host.hidden)openSidebar(m.view||'list');else closeSidebar();reply({ok:true});return;}
     if(m?.type==='panel:export')return respond(quickExport(m.kind).then(()=>{const text=$('status').textContent;return {status:text,error:!!text&&text===lastError};}));
     if(m?.type==='panel:obsidianOpen'){reply({ok:!!openSaved()});return;}
     if(m?.type==='panel:raw')return respond(ensureLoaded().then(rawExport).then(()=>({status:$('status').textContent})));

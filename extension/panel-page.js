@@ -41,6 +41,11 @@
     await chrome.scripting.executeScript({target:{tabId:target.id},files:chrome.runtime.getManifest().content_scripts[0].js});
     return chrome.tabs.sendMessage(target.id,message);
   }
+  // On ChatGPT tabs, clicking the toolbar icon opens the centered square floating modal directly.
+  if(popup&&chatTab(tab)&&location.hostname!=='x'){
+    const isChat=/\/(c|share)\/[^/]+/.test(tab.url||'');
+    try{await call({type:'panel:toggle',view:isChat?'list':'settings'});window.close();return;}catch{}
+  }
   // 导出原始 JSON from the settings tab goes to the ChatGPT tab used last.
   async function lastChatTab(){const tabs=await chrome.tabs.query({url:['https://chatgpt.com/*','https://chat.openai.com/*']});return tabs.sort((a,b)=>(b.lastAccessed||0)-(a.lastAccessed||0))[0]||null;}
   const actions={
