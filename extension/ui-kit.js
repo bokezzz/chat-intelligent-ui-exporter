@@ -404,9 +404,11 @@
 .spl.sync.on .sdot{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
 .spl.sync.warn .sdot{background:var(--warn);box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 22%,transparent)}
 .spl.sync.err .sdot{background:var(--err);box-shadow:0 0 0 3px color-mix(in srgb,var(--err) 22%,transparent)}
-.spl.sync .sauto{border-left:1px solid color-mix(in srgb,var(--pri) 22%,var(--line));padding:8px 9px;border-radius:0 9px 9px 0;font-size:11.5px;color:var(--muted)}
+.spl.sync .sauto{border-left:1px solid color-mix(in srgb,var(--pri) 22%,var(--line));padding:8px 8px;border-radius:0;font-size:11.5px;color:var(--muted)}
 .spl.sync.on .sauto{color:var(--pri-deep)}
 .spl.sync .sauto:disabled{opacity:.65;cursor:default}
+.spl.sync .arr{border-left:1px solid color-mix(in srgb,var(--pri) 22%,var(--line))}
+.menu .mlist{max-height:220px;overflow:auto}
 .dock.narrow .spl .oopen span{display:none}
 .dock.compact{min-width:0;gap:4px}
 .dock.compact .spl .main small{display:none}

@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.2.1';
+  const version='1.2.2';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -575,7 +575,8 @@
 <div class="menu" id="mSelect" role="menu" hidden><div class="mlab">${esc(t('dock.quick'))}</div>${['all','mine','answers','none'].map(v=>`<button class="mi" role="menuitem" data-preset="${v}">${esc(t(`dock.preset.${v}`))}</button>`).join('')}<div class="msep"></div><button class="mi" role="menuitem" data-open="list">${icon('list')}${esc(t('dock.pickInSidebar'))}</button></div></div>
 <div class="spl pri"><button class="main" id="dExport" title="${esc(t('dock.exportTip'))}"></button><button class="oopen" id="dOpen" hidden title="${esc(t('side.obsOpenTip'))}" aria-label="${esc(t('dock.obsOpenLabel'))}">${icon('ext')}</button><button class="arr" data-menu="mExport" title="${esc(t('dock.kinds'))}" aria-haspopup="menu" aria-expanded="false">${icon('chev')}</button>
 <div class="menu" id="mExport" role="menu" hidden><div class="mlab">${esc(t('dock.kindsHint'))}</div>${kindMenu.map(([v,ic,sub])=>`<button class="mi" role="menuitemradio" data-kind="${v}">${icon(ic)}${esc(t(`kind.${v}.menu`))}<small data-sub="${v}">${sub?esc(t(sub)):''}</small><span class="ok">${icon('check')}</span></button>`).join('')}<div class="msep"></div><button class="mi" role="menuitem" data-open="settings">${icon('gear')}${esc(t('dock.settings'))}</button><div class="mfoot">Chat &amp; Intelligent UI Exporter for ChatGPT v${version}</div></div></div>
-<div class="spl sync" id="dSyncWrap" hidden><button class="main" id="dSync" title="${esc(t('side.syncNowTip'))}">${icon('refresh')}<span>${esc(t('side.syncNow'))}</span></button><button class="sauto" id="dAuto" type="button" title="${esc(t('side.syncChat'))}" aria-pressed="false"><i class="sdot" id="dSyncDot"></i></button></div>
+<div class="spl sync" id="dSyncWrap" hidden><button class="main" id="dSync" title="${esc(t('side.syncNowTip'))}">${icon('refresh')}<span>${esc(t('side.syncNow'))}</span></button><button class="sauto" id="dAuto" type="button" title="${esc(t('side.syncChat'))}" aria-pressed="false"><i class="sdot" id="dSyncDot"></i></button><button class="arr" data-menu="mSync" title="${esc(t('side.syncCatLabel'))}" aria-haspopup="menu" aria-expanded="false">${icon('chev')}</button>
+<div class="menu" id="mSync" role="menu" hidden><div class="mlab">${esc(t('side.syncCatLabel'))}</div><div class="mlist" id="mSyncCats"></div><div class="msep"></div><button class="mi" role="menuitem" data-sync-action="scan">${icon('refresh')}${esc(t('set.syncCats.scan'))}</button><button class="mi" role="menuitem" data-open="settings">${icon('gear')}${esc(t('dock.settings'))}</button></div></div>
 </div><div class="toast" id="toast" role="status"></div></div>`;
   const closeMenus=()=>{for(const m of dui.querySelectorAll('.menu'))m.hidden=true;for(const b of dui.querySelectorAll('[data-menu]'))b.setAttribute('aria-expanded','false');};
   dui.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
@@ -586,6 +587,8 @@
     if(t.id==='dOpen')return openSaved();
     if(t.id==='dSync')return triggerSyncNow('dock');
     if(t.id==='dAuto')return toggleCurrentChatAutoSync();
+    if('syncCat' in t.dataset)return applyCategoryChange(t.dataset.syncCat);
+    if(t.dataset.syncAction==='scan')return send({type:'obsidian:scan',base:cfg().autoSyncSubfolder||'ChatGPT-Raw'}).catch(err=>toast(err.message));
     if(t.dataset.kind)return settings.set({exportKind:t.dataset.kind});
     if(t.dataset.preset)return preset(t.dataset.preset);
     if(t.dataset.open)return openSidebar(t.dataset.open);});
@@ -688,6 +691,19 @@
     if(reason==='dock'&&resident)toast(t('status.syncSyncing'),true);
     syncQueue.enqueue(id,{force:true,interactive:false,reason});
   }
+  async function applyCategoryChange(nextCat){
+    const id=target().id;if(!id||!syncStore||!AutoSync)return;
+    const existing=syncStore.getRecord(id);
+    const clean=await syncStore.setChatCategory(id,nextCat);
+    const nextSub=AutoSync.resolveSubfolder(cfg().autoSyncSubfolder||'ChatGPT-Raw',clean);
+    updateSyncBar();
+    if(existing?.folderName&&existing.subfolder!==nextSub){
+      if(resident)toast(t('status.syncMigrating'),true);
+      syncQueue?.enqueue(id,{force:true,interactive:false,reason:'migrate'});
+    }else if(resident){
+      toast(t('status.syncMigrated',nextSub));
+    }
+  }
   async function toggleCurrentChatAutoSync(){
     const id=target().id;if(!id||!syncStore||!AutoSync)return;
     const mode=AutoSync.getSyncMode(cfg());
@@ -730,8 +746,8 @@
       if(dAuto){dAuto.disabled=isGlobalAll;dAuto.setAttribute('aria-pressed',String(isAutoOn));dAuto.title=`${t('side.syncChat')} (${isAutoOn?t('set.on'):t('set.off')})`;}
     }
     const catSel=$('syncCat');
+    const allCats=[...new Set([...(info.categories||[]),...(info.category?[info.category]:[])])].sort((a,b)=>a.localeCompare(b));
     if(catSel){
-      const allCats=[...new Set([...(info.categories||[]),...(info.category?[info.category]:[])])].sort((a,b)=>a.localeCompare(b));
       const sig=`${info.baseSubfolder}|${allCats.join('\u0000')}`;
       if(catSel.dataset.sig!==sig){
         catSel.dataset.sig=sig;
@@ -739,6 +755,16 @@
       }
       catSel.value=info.category||'';
       catSel.disabled=info.busy;
+    }
+    const dockCats=D('mSyncCats');
+    if(dockCats){
+      const curCat=info.category||'';
+      const dSig=`${info.baseSubfolder}|${curCat}|${allCats.join('\u0000')}`;
+      if(dockCats.dataset.sig!==dSig){
+        dockCats.dataset.sig=dSig;
+        const items=[['',t('side.syncCatRoot',info.baseSubfolder)],...allCats.map(c=>[c,c])];
+        dockCats.innerHTML=items.map(([v,label])=>`<button class="mi${v===curCat?' on':''}" role="menuitemradio" data-sync-cat="${esc(v)}">${icon('archive')}${esc(label)}<span class="ok">${icon('check')}</span></button>`).join('');
+      }
     }
     renderSettingsCategories();
   }
@@ -868,17 +894,6 @@
       updateSyncBar();
     });
     $('syncNow')?.addEventListener('click',()=>triggerSyncNow('sidebar'));
-    const applyCategoryChange=async nextCat=>{
-      const id=target().id;if(!id)return;
-      const existing=syncStore.getRecord(id);
-      const clean=await syncStore.setChatCategory(id,nextCat);
-      const nextSub=AutoSync.resolveSubfolder(cfg().autoSyncSubfolder||'ChatGPT-Raw',clean);
-      updateSyncBar();
-      if(existing?.folderName&&existing.subfolder!==nextSub){
-        if(resident)toast(t('status.syncMigrating'),true);
-        syncQueue.enqueue(id,{force:true,interactive:false,reason:'migrate'});
-      }
-    };
     $('syncCat')?.addEventListener('change',e=>applyCategoryChange(e.target.value));
     $('syncCatToggle')?.addEventListener('click',()=>{
       const row=$('syncCatNewRow');if(!row)return;
