@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.11';
+  const version='1.1.12';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -575,7 +575,7 @@
 <div class="menu" id="mSelect" role="menu" hidden><div class="mlab">${esc(t('dock.quick'))}</div>${['all','mine','answers','none'].map(v=>`<button class="mi" role="menuitem" data-preset="${v}">${esc(t(`dock.preset.${v}`))}</button>`).join('')}<div class="msep"></div><button class="mi" role="menuitem" data-open="list">${icon('list')}${esc(t('dock.pickInSidebar'))}</button></div></div>
 <div class="spl pri"><button class="main" id="dExport" title="${esc(t('dock.exportTip'))}"></button><button class="oopen" id="dOpen" hidden title="${esc(t('side.obsOpenTip'))}" aria-label="${esc(t('dock.obsOpenLabel'))}">${icon('ext')}</button><button class="arr" data-menu="mExport" title="${esc(t('dock.kinds'))}" aria-haspopup="menu" aria-expanded="false">${icon('chev')}</button>
 <div class="menu" id="mExport" role="menu" hidden><div class="mlab">${esc(t('dock.kindsHint'))}</div>${kindMenu.map(([v,ic,sub])=>`<button class="mi" role="menuitemradio" data-kind="${v}">${icon(ic)}${esc(t(`kind.${v}.menu`))}<small data-sub="${v}">${sub?esc(t(sub)):''}</small><span class="ok">${icon('check')}</span></button>`).join('')}<div class="msep"></div><button class="mi" role="menuitem" data-open="settings">${icon('gear')}${esc(t('dock.settings'))}</button><div class="mfoot">Chat &amp; Intelligent UI Exporter for ChatGPT v${version}</div></div></div>
-<div class="spl" id="dSyncWrap" hidden><button class="main" id="dSync" title="${esc(t('side.syncNowTip'))}">${icon('refresh')}<span>${esc(t('side.syncNow'))}</span></button></div>
+<div class="spl sync" id="dSyncWrap" hidden><button class="main" id="dSync" title="${esc(t('side.syncNowTip'))}">${icon('refresh')}<span>${esc(t('side.syncNow'))}</span></button><button class="sauto" id="dAuto" type="button" title="${esc(t('side.syncChat'))}" aria-pressed="false"><i class="sdot" id="dSyncDot"></i></button></div>
 </div><div class="toast" id="toast" role="status"></div></div>`;
   const closeMenus=()=>{for(const m of dui.querySelectorAll('.menu'))m.hidden=true;for(const b of dui.querySelectorAll('[data-menu]'))b.setAttribute('aria-expanded','false');};
   dui.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
@@ -585,6 +585,7 @@
     if(t.id==='dExport')return quickExport();
     if(t.id==='dOpen')return openSaved();
     if(t.id==='dSync')return triggerSyncNow('dock');
+    if(t.id==='dAuto')return toggleCurrentChatAutoSync();
     if(t.dataset.kind)return settings.set({exportKind:t.dataset.kind});
     if(t.dataset.preset)return preset(t.dataset.preset);
     if(t.dataset.open)return openSidebar(t.dataset.open);});
@@ -682,26 +683,47 @@
     if(reason==='dock'&&resident)toast(t('status.syncSyncing'),true);
     syncQueue.enqueue(id,{force:true,interactive:false,reason});
   }
+  async function toggleCurrentChatAutoSync(){
+    const id=target().id;if(!id||!syncStore||!AutoSync)return;
+    const mode=AutoSync.getSyncMode(cfg());
+    if(mode==='all')return;
+    const next=!(mode==='selected'&&syncStore.isTracked(id));
+    await syncStore.setTracked(id,next);
+    if(next&&mode==='off')await settings.set({autoSyncMode:'selected'});
+    if(next)syncQueue?.enqueue(id,{reason:'dock_auto_on'});
+    updateSyncBar();
+    if(resident)toast(next?t('status.syncReady'):t('status.syncOff'));
+  }
   function updateSyncBar(){
-    const bar=$('syncBar'),dWrap=D('dSyncWrap'),dBtn=D('dSync');
+    const bar=$('syncBar'),dWrap=D('dSyncWrap'),dBtn=D('dSync'),dAuto=D('dAuto');
     if(!bar||!AutoSync||!resident){if(bar)bar.hidden=true;if(dWrap)dWrap.hidden=true;return;}
     const info=syncStatusPayload();
     if(!info.conversationId){bar.hidden=true;if(dWrap)dWrap.hidden=true;return;}
     bar.hidden=false;
-    if(dWrap){dWrap.hidden=false;if(dBtn)dBtn.disabled=info.busy;}
     const sw=$('syncChat'),nowBtn=$('syncNow'),meta=$('syncMeta');
     const isGlobalAll=info.mode==='all';
-    sw.checked=isGlobalAll||(info.mode==='selected'&&info.tracked);sw.disabled=isGlobalAll;
+    const isAutoOn=isGlobalAll||(info.mode==='selected'&&info.tracked);
+    sw.checked=isAutoOn;sw.disabled=isGlobalAll;
     nowBtn.disabled=info.busy;
     const rec=info.record;
     meta.className='syncmeta';
-    if(info.busy)meta.textContent=t('status.syncSyncing');
-    else if(rec?.status==='need_permission'){meta.classList.add('err');meta.textContent=t('status.syncNeedPerm');}
-    else if(rec?.status==='retrying'){meta.classList.add('warn');meta.textContent=t('status.syncRetrying',rec.attempt||1);}
-    else if(rec?.status==='error'){meta.classList.add('err');meta.textContent=t('status.syncError',rec.error||t('err.unknown'));}
-    else if(rec?.syncedAt)meta.textContent=t('status.syncLast',formatSyncTime(rec.syncedAt),rec.syncVersion||1);
-    else if(isGlobalAll||(info.mode==='selected'&&info.tracked))meta.textContent=t('status.syncReady');
-    else meta.textContent=t('status.syncOff');
+    let statusLine='';
+    if(info.busy)statusLine=t('status.syncSyncing');
+    else if(rec?.status==='need_permission'){meta.classList.add('err');statusLine=t('status.syncNeedPerm');}
+    else if(rec?.status==='retrying'){meta.classList.add('warn');statusLine=t('status.syncRetrying',rec.attempt||1);}
+    else if(rec?.status==='error'){meta.classList.add('err');statusLine=t('status.syncError',rec.error||t('err.unknown'));}
+    else if(rec?.syncedAt)statusLine=t('status.syncLast',formatSyncTime(rec.syncedAt),rec.syncVersion||1);
+    else if(isAutoOn)statusLine=t('status.syncReady');
+    else statusLine=t('status.syncOff');
+    meta.textContent=statusLine;
+    if(dWrap){
+      dWrap.hidden=false;
+      dWrap.classList.toggle('on',isAutoOn&&rec?.status!=='error'&&rec?.status!=='need_permission'&&rec?.status!=='retrying');
+      dWrap.classList.toggle('warn',info.busy||rec?.status==='retrying');
+      dWrap.classList.toggle('err',rec?.status==='error'||rec?.status==='need_permission');
+      if(dBtn){dBtn.disabled=info.busy;dBtn.title=`${t('side.syncNowTip')}\n${statusLine}`;}
+      if(dAuto){dAuto.disabled=isGlobalAll;dAuto.setAttribute('aria-pressed',String(isAutoOn));dAuto.title=`${t('side.syncChat')} (${isAutoOn?t('set.on'):t('set.off')})`;}
+    }
   }
   async function syncConversation(task){
     const {conversationId,force=false,interactive=false}=task;
