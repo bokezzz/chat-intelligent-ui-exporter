@@ -70,6 +70,11 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       const base = encodeURIComponent(String(message.base || 'ChatGPT-Raw').slice(0, 60));
       return {id: (await chrome.tabs.create({url: chrome.runtime.getURL(`obsidian.html?scan=1&base=${base}`), index: sender.tab.index + 1, openerTabId: sender.tab.id, active: false})).id};
     }
+    if (message.type === 'obsidian:mkdir') {
+      const base = encodeURIComponent(String(message.base || 'ChatGPT-Raw').slice(0, 60));
+      const cat = encodeURIComponent(String(message.cat || '').slice(0, 120));
+      return {id: (await chrome.tabs.create({url: chrome.runtime.getURL(`obsidian.html?mkdir=1&base=${base}&cat=${cat}`), index: sender.tab.index + 1, openerTabId: sender.tab.id, active: false})).id};
+    }
     throw Error(t('bg.unknown'));
   })().then(result => reply(result), error => reply({error: error.message}));
   return true;
