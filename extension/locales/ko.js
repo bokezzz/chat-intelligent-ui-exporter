@@ -571,4 +571,6 @@
   "set.syncNow.button": "지금 동기화",
   "panel.syncRunning": "현재 대화를 Obsidian으로 동기화 중…",
   "panel.syncDone": "Obsidian에 동기화됨",
+  "set.autoSyncPrismCards": "Prism (viz) 대화형 카드 사용",
+  "set.autoSyncPrismCards.on": "켜짐 · Obsidian에서 바로 조작할 수 있는 viz 블록으로 저장",
 };

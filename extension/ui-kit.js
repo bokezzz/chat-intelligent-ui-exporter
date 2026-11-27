@@ -72,6 +72,7 @@
       {key:'autoSyncImages',label:t('set.autoSyncImages'),dep:true,dim:v=>!v.autoSyncEnabled,value:onOff('set.on'),control:'switch'},
       {key:'autoSyncAttachments',label:t('set.autoSyncAttachments'),dep:true,dim:v=>!v.autoSyncEnabled,value:onOff('set.on'),control:'switch'},
       {key:'autoSyncUi',label:t('set.autoSyncUi'),dep:true,dim:v=>!v.autoSyncEnabled,value:onOff('set.on'),control:'switch'},
+      {key:'autoSyncPrismCards',label:t('set.autoSyncPrismCards'),value:onOff('set.autoSyncPrismCards.on'),control:'switch'},
       {key:'syncNow',label:t('set.syncNow'),value:()=>t('set.syncNow.value'),control:'button',text:t('set.syncNow.button')},
     ]},
     {key:'btns',title:t('set.btns'),summary:v=>v.dockShow?t('set.btns.shown',v.dockPos==='corner'?t('set.dockPos.corner'):t('set.dockPos.input')):t('set.btns.hidden'),rows:[

@@ -571,4 +571,6 @@
   "set.syncNow.button": "Jetzt synchronisieren",
   "panel.syncRunning": "Aktueller Chat wird mit Obsidian synchronisiert…",
   "panel.syncDone": "Mit Obsidian synchronisiert",
+  "set.autoSyncPrismCards": "Interaktive Karten per Prism (viz)",
+  "set.autoSyncPrismCards.on": "An · Exportiert Karten als interaktive viz-Blöcke in Obsidian",
 };

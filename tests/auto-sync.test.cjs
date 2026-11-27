@@ -308,3 +308,24 @@ test('end-to-end resident page auto-syncs silently on sync:now and keeps manual 
 
   dom.window.close();
 });
+
+test('prismVizBlock builds a CSP-safe interactive Prism viz block that updates state on click without eval', async () => {
+  const dilRender = require('../extension/dil-render.js');
+  const dil = {
+    code: 'const [n, setN] = DIL.useState(1, {key:"n"}); DIL.render(__dil.jsx("card", {}, __dil.jsx("text", {}, "Count: " + n), __dil.jsx("button", {onClick: () => setN(n + 1)}, "Add")));',
+  };
+  const block = dilRender.prismVizBlock({dil, card: 0, title: 'Counter Card'});
+  assert.ok(block);
+  assert.match(block, /^`{3,}viz raw title="Counter Card"\n/);
+  // Extract inner HTML/JS and execute inside a fresh JSDOM (no Function/eval called by mountLive).
+  const inner = block.replace(/^`+viz raw[^\n]*\n/, '').replace(/\n`+$/, '');
+  const dom = new JSDOM(`<!doctype html><html><head></head><body>${inner}</body></html>`, {runScripts: 'dangerously'});
+  const w = dom.window;
+  assert.match(w.document.getElementById('root').textContent, /Count: 1/);
+  const btn = w.document.querySelector('button');
+  assert.ok(btn, 'interactive button rendered');
+  btn.click();
+  await new Promise(r => setTimeout(r, 15));
+  assert.match(w.document.getElementById('root').textContent, /Count: 2/);
+  dom.window.close();
+});

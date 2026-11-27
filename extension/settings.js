@@ -5,7 +5,7 @@
 // localStorage holds them, the five older options under the keys they always had.
 (root => {
   const I18n=root.ChatExportI18n||(typeof module!=='undefined'?require('./i18n.js'):null),t=I18n.t;
-  const version='1.1.0';
+  const version='1.1.1';
   const defaults={
     saveAs:false,
     exportKind:'zip', profile:'generic', htmlForm:'single', htmlMap:true, autoClose:false,
@@ -17,7 +17,7 @@
     // is kept by obsidian.html, which also writes this name.
     obsidianFolder:'',
     autoSyncEnabled:false, autoSyncScope:'all', autoSyncSubfolder:'ChatGPT-Raw',
-    autoSyncImages:true, autoSyncAttachments:true, autoSyncUi:true,
+    autoSyncImages:true, autoSyncAttachments:true, autoSyncUi:true, autoSyncPrismCards:false,
     language:'auto',
   };
   const choices={exportKind:['md','zip','html','pdf','obsidian'],profile:['generic','obsidian'],htmlForm:['folder','single'],fileName:['title','title-date','date-title','prefix'],proseHtml:['escape','keep'],dockPos:['input','corner'],autoSyncScope:['all','selected'],language:['auto',...I18n.LOCALES]};

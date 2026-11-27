@@ -1148,7 +1148,7 @@ a.link{color:#2964aa}a.img-link{display:contents}.cite a{color:inherit;text-deco
     const toast = text => {const t = doc.createElement('div');t.className = 'dil-toast';t.setAttribute('role', 'status');t.textContent = text;doc.querySelectorAll('.dil-toast').forEach(n => n.remove());doc.body.append(t);win.setTimeout(() => t.remove(), 3000);};
     const style = doc.createElement('style');style.textContent = `${cardCss()}\n${LIVE_CSS}`;doc.head.append(style);
     const root = doc.getElementById('root') || doc.body.appendChild(doc.createElement('div'));
-    const execute = (code, scope) => Function(...Object.keys(scope), code)(...Object.values(scope));
+    const execute = init.execute || ((code, scope) => Function(...Object.keys(scope), code)(...Object.values(scope)));
     const opts = {live:true, image:src => init.images?.[src] || null, math:mathml, widget:id => init.blocks?.[id] ? appBlockFrame(init.blocks[id]) : null};
     let queued = false, shown = false;
     const schedule = () => {if (!queued) {queued = true;Promise.resolve().then(render);}};
@@ -1593,7 +1593,48 @@ a.link{color:#2964aa}a.img-link{display:contents}.cite a{color:inherit;text-deco
     evaluateRemote.close = () => {closed = true;frame.remove();};
     return evaluateRemote;
   }
-  const api = {evaluate, rescued, stateVariants, toMarkdown, segments, toHtml, texHtml, unknownComponents, get CARD_CSS() {return cardCss();}, pageText, withImages, pictureList, validateCardHtml, markdownText, snapshotPng, appBlocks, standaloneHtml, appBlockCaptureHtml, appBlockPreview, sandboxClient,
+  // Builds a self-contained Obsidian Prism ```viz raw``` block for one interactive card.
+  // Compiles dil.code into an inline function so Prism's strict CSP (no eval/new Function) works offline.
+  function prismVizBlock({dil, card = 0, images = {}, blocks = {}, text = null, title = ''} = {}) {
+    if (typeof dil?.code !== 'string' || !dil.code.trim()) return null;
+    const baseParams = ['DIL', '__dil', 'GenUI', 'Link', 'Cite', 'Entity', 'AsyncImage', 'AsyncImageGroup', 'FileCite', 'MemoryCite', 'LearningQuiz', 'Rating'];
+    const extraParams = [].concat(dil.requiredComponents || []).filter(n => typeof n === 'string' && /^[A-Z][\w$]*$/.test(n) && !baseParams.includes(n));
+    const params = [...baseParams, ...extraParams];
+    const safeScript = s => String(s).replace(/<\/script/gi, '<\\/script');
+    const safeJson = obj => safeScript(JSON.stringify(obj)).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+    const initData = {
+      frame: 0,
+      card: Number(card) || 0,
+      dil: {...dil, code: '/* inline */'},
+      images: images || {},
+      blocks: blocks || {},
+      text: text || pageText() || null,
+    };
+    const runtimeSrc = safeScript(`(${dilRenderModule})(globalThis);`);
+    const cardCode = safeScript(dil.code);
+    const body = [
+      '<style>html,body{margin:0;padding:0;background:transparent;overflow-x:auto}.dil-root{padding:2px 0}</style>',
+      '<div id="root"></div>',
+      '<script>',
+      runtimeSrc,
+      `function __runDilCard(${params.join(',')}){`,
+      cardCode,
+      '}',
+      `(function(){var init=${safeJson(initData)};var p=${safeJson(params)};`,
+      'init.execute=function(_c,s){return __runDilCard.apply(null,p.map(function(k){return s[k];}));};',
+      'var host={postMessage:function(){}};',
+      'try{ChatExportDilRender.mountLive(init,document,host);}catch(e){var r=document.getElementById("root");if(r)r.textContent=String(e&&e.message||e);}',
+      '})();',
+      '</script>',
+    ].join('\n');
+    // Pick a fence longer than any backtick run inside the generated block.
+    const runs = body.match(/`{3,}/g) || [];
+    const fence = '`'.repeat(Math.max(3, ...runs.map(r => r.length + 1)));
+    const safeTitle = String(title || '').replace(/["\r\n]/g, ' ').trim();
+    const header = safeTitle ? `${fence}viz raw title="${safeTitle}"` : `${fence}viz raw`;
+    return `${header}\n${body}\n${fence}`;
+  }
+  const api = {evaluate, rescued, stateVariants, toMarkdown, segments, toHtml, texHtml, unknownComponents, get CARD_CSS() {return cardCss();}, pageText, withImages, pictureList, validateCardHtml, markdownText, snapshotPng, appBlocks, standaloneHtml, appBlockCaptureHtml, appBlockPreview, sandboxClient, prismVizBlock,
     // HTML export: live cards, formulas, AppBlock frames, map places, and this file's own source
     // (run again inside every card frame of the exported page).
     LIVE_CSS, mathml, mountLive, morph, appBlockFrame, appBlockFrameHtml, setFrameHeight, copyText, placeOf, source:() => `(${dilRenderModule})(globalThis);`};

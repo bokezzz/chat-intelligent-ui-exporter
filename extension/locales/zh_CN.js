@@ -571,4 +571,6 @@
   "set.syncNow.button": "立即同步",
   "panel.syncRunning": "正在同步当前对话到 Obsidian…",
   "panel.syncDone": "已同步到 Obsidian",
+  "set.autoSyncPrismCards": "用 Prism 渲染交互卡片（viz）",
+  "set.autoSyncPrismCards.on": "开 · 在 Obsidian 中直接输出可交互的 viz 代码块",
 };

@@ -571,4 +571,6 @@
   "set.syncNow.button": "今すぐ同期",
   "panel.syncRunning": "現在の会話を Obsidian へ同期中…",
   "panel.syncDone": "Obsidian へ同期しました",
+  "set.autoSyncPrismCards": "Prism (viz) で対話カードを表示",
+  "set.autoSyncPrismCards.on": "オン · Obsidian 内で操作可能な viz ブロックとして出力",
 };

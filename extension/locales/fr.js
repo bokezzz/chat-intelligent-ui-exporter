@@ -571,4 +571,6 @@
   "set.syncNow.button": "Synchroniser",
   "panel.syncRunning": "Synchronisation de la discussion vers Obsidian…",
   "panel.syncDone": "Synchronisé vers Obsidian",
+  "set.autoSyncPrismCards": "Cartes interactives via Prism (viz)",
+  "set.autoSyncPrismCards.on": "Activé · Exporte les cartes en blocs viz interactifs dans Obsidian",
 };

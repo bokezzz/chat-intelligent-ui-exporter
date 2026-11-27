@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.0';
+  const version='1.1.1';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -239,9 +239,21 @@
   // Pictures already drawn in the card are left out of the folded text.
   // Every card's outcome (table, png or text, and why a table fell back) goes into manifest.json.
   // Cards without a picture are reported once per message: how many, and the first reason.
-  async function cardMarkdown(m,assets,warnings,cards,pdf){let n=0;const parts=[],failed=[];for(const s of m.segments)parts.push(await (async()=>{
+  async function cardMarkdown(m,assets,warnings,cards,pdf,prism=false){let n=0,cardIdx=0;const parts=[],failed=[];for(const s of m.segments)parts.push(await (async()=>{
     let fallback;
     const html=htmlCards()&&!pdf,list=s.kind==='card'?(s.list||(html?s.looseList:null)):null;
+    const idx=s.kind==='card'?cardIdx++:-1;
+    if(s.kind==='card'&&prism&&m.dil?.code&&dilRender?.prismVizBlock){
+      try{
+        const viz=dilRender.prismVizBlock({dil:{...m.dil,contentReferences:m.contentReferences},card:idx,images:m.cardPictures||{},title:t('md.card')});
+        if(viz){
+          cards.push({messageId:m.id,card:++n,layout:'prism'});
+          const words=s.md.replace(/!\[[^\]]*\]\(([^)\s]+)\) ?/g,(x,u)=>m.drawnImages?.has(u)?'':x).replace(/\n{3,}/g,'\n\n').trim();
+          const text=words?`\n\n> [!note]- ${t('md.cardText')}\n${words.split('\n').map(l=>l?`> ${l}`:'>').join('\n')}`:'';
+          return `${viz}${text}`;
+        }
+      }catch(e){fallback=e?.message||String(e);}
+    }
     if(list){try{const out=await pictureTable(m,{...s,list},n+1,assets,html);cards.push({messageId:m.id,card:++n,layout:out.layout,pictures:list.length,...(out.fallback?{fallback:out.fallback}:{})});return out.md;}catch(e){fallback=e?.message||String(e);}}
     if(s.kind!=='card'||!s.png||fault('png')){if(s.kind==='card'){cards.push({messageId:m.id,card:null,layout:'text',fallback});if(s.error)failed.push(s.error);}return s.md;}
     cards.push({messageId:m.id,card:n+1,layout:'png',fallback});
@@ -288,7 +300,7 @@
       // text, no picture), ChatGPT's fallback text stands in.
       const fallbackText=escapeProseHtml()||pdf?original.mdEscaped??original.md:original.md;
       const withCards=zip&&saveUi&&original.segments&&(original.staticMd||original.segments.some(s=>s.kind==='card'));
-      const text=withCards?((html?htmlSegments(original):await cardMarkdown(original,assets,warnings,cards,pdf)).trim()||fallbackText):original.staticMd||fallbackText;
+      const text=withCards?((html?htmlSegments(original):await cardMarkdown(original,assets,warnings,cards,pdf,mode==='obsidian'&&!!cfg().autoSyncPrismCards)).trim()||fallbackText):original.staticMd||fallbackText;
       const md=!original.staticMd&&original.rescuedMd?`${text}\n\n${original.rescuedMd}`:text;
       // Components added by ChatGPT after this version: their text is kept, and the note says which ones.
       if(original.unknownComponents?.length)warnings.push(`${original.id}: ${t('warn.unknownComponents',original.unknownComponents.join(', '))}`);

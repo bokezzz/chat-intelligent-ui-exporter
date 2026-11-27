@@ -585,4 +585,6 @@
   "set.syncNow.button": "Sync now",
   "panel.syncRunning": "Syncing current chat to Obsidian…",
   "panel.syncDone": "Synced to Obsidian",
+  "set.autoSyncPrismCards": "Interactive cards via Prism (viz)",
+  "set.autoSyncPrismCards.on": "On · Export cards as live Prism viz blocks in Obsidian",
 };
