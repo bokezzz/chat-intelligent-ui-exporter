@@ -118,11 +118,13 @@ test('writeSyncJob writes conversation.md, metadata.json and assets/ui/files; up
   assert.equal(await at(vault, `ChatGPT-Raw/${r1.name}/conversation.md`).text(), '# Physics Notes Renamed\n\nQ1\n\nA1 regenerated\n');
 });
 
-test('sync scope, hash stability, and stale update detection work as expected', () => {
-  assert.equal(AutoSync.shouldSyncConversation({autoSyncEnabled: false, autoSyncScope: 'all'}, 'c1', {}), false);
+test('sync mode, hash stability, and stale update detection work as expected', () => {
+  assert.equal(AutoSync.shouldSyncConversation({autoSyncMode: 'off'}, 'c1', {c1: true}), false);
+  assert.equal(AutoSync.shouldSyncConversation({autoSyncMode: 'all'}, 'c1', {}), true);
+  assert.equal(AutoSync.shouldSyncConversation({autoSyncMode: 'selected'}, 'c1', {}), false);
+  assert.equal(AutoSync.shouldSyncConversation({autoSyncMode: 'selected'}, 'c1', {c1: true}), true);
+  // Legacy settings still map cleanly.
   assert.equal(AutoSync.shouldSyncConversation({autoSyncEnabled: true, autoSyncScope: 'all'}, 'c1', {}), true);
-  assert.equal(AutoSync.shouldSyncConversation({autoSyncEnabled: true, autoSyncScope: 'selected'}, 'c1', {}), false);
-  assert.equal(AutoSync.shouldSyncConversation({autoSyncEnabled: true, autoSyncScope: 'selected'}, 'c1', {c1: true}), true);
 
   const h1 = AutoSync.computeHash({conversationId: 'c1', title: 'T', messages: [{id: 'a', role: 'user', md: 'hi'}]});
   const h2 = AutoSync.computeHash({conversationId: 'c1', title: 'T', messages: [{id: 'a', role: 'user', md: 'hi'}]});

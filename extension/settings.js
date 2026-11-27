@@ -5,7 +5,7 @@
 // localStorage holds them, the five older options under the keys they always had.
 (root => {
   const I18n=root.ChatExportI18n||(typeof module!=='undefined'?require('./i18n.js'):null),t=I18n.t;
-  const version='1.1.3';
+  const version='1.1.4';
   const defaults={
     saveAs:false,
     exportKind:'zip', profile:'generic', htmlForm:'single', htmlMap:true, autoClose:false,
@@ -16,11 +16,11 @@
     // The name of the folder 保存到 Obsidian writes into, for display; the folder itself (its handle)
     // is kept by obsidian.html, which also writes this name.
     obsidianFolder:'',
-    autoSyncEnabled:false, autoSyncScope:'all', autoSyncSubfolder:'ChatGPT-Raw',
+    autoSyncMode:'off', autoSyncSubfolder:'ChatGPT-Raw',
     autoSyncImages:true, autoSyncAttachments:true, autoSyncUi:true, autoSyncPrismCards:false,
     language:'auto',
   };
-  const choices={exportKind:['md','zip','html','pdf','obsidian'],profile:['generic','obsidian'],htmlForm:['folder','single'],fileName:['title','title-date','date-title','prefix'],proseHtml:['escape','keep'],dockPos:['input','corner'],autoSyncScope:['all','selected'],language:['auto',...I18n.LOCALES]};
+  const choices={exportKind:['md','zip','html','pdf','obsidian'],profile:['generic','obsidian'],htmlForm:['folder','single'],fileName:['title','title-date','date-title','prefix'],proseHtml:['escape','keep'],dockPos:['input','corner'],autoSyncMode:['off','selected','all'],language:['auto',...I18n.LOCALES]};
   // The profile only sets the defaults of these options; each can still be changed by hand.
   // Picture cards as HTML stay off in both until that output is checked before it is written.
   const profiles={generic:{htmlCards:false,proseHtml:'escape'},obsidian:{htmlCards:false,proseHtml:'keep'}};
@@ -46,6 +46,10 @@
     const values={...defaults};
     // An older page saved only a profile: its defaults apply to the options it sets.
     if(clean('profile',stored.profile))Object.assign(values,profiles[stored.profile]);
+    // Migrate legacy autoSyncEnabled + autoSyncScope into unified autoSyncMode.
+    if(stored.autoSyncMode===undefined&&stored.autoSyncEnabled===true){
+      values.autoSyncMode=stored.autoSyncScope==='selected'?'selected':'all';
+    }
     for(const key of Object.keys(defaults)){const v=clean(key,stored[key]);if(v!==undefined)values[key]=v;}
     return values;
   }

@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.3';
+  const version='1.1.4';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -534,7 +534,7 @@
   function closeSidebar(){host.hidden=true;placeDock();}
   $('close').onclick=closeSidebar;$('gear').onclick=$('gear2').onclick=()=>showView('settings');$('back').onclick=()=>showView('list');
   const panelSettings=UI.mountSettings($('setView'),settings,{
-    action:name=>{if(name==='raw')rawExport();else if(name==='obsFolder')send({type:'obsidian:setup'}).catch(e=>fail(e.message));else if(name==='syncNow'){const id=target().id;if(id&&syncQueue)syncQueue.enqueue(id,{force:true,interactive:false,reason:'settings'});}else if(name==='reset')settings.reset();else if(name==='shortcut')send({type:'open:shortcuts'}).catch(e=>fail(e.message));},
+    action:name=>{if(name==='raw')rawExport();else if(name==='obsFolder')send({type:'obsidian:setup'}).catch(e=>fail(e.message));else if(name==='reset')settings.reset();else if(name==='shortcut')send({type:'open:shortcuts'}).catch(e=>fail(e.message));},
     // A page script cannot open extension pages; the background opens the explanation in a new tab.
     help:topic=>send({type:'open:help',topic}).catch(e=>fail(e.message)),
     commands:()=>send({type:'commands:get'}).then(r=>r.commands)});
@@ -554,7 +554,7 @@
 <div class="menu" id="mSelect" role="menu" hidden><div class="mlab">${esc(t('dock.quick'))}</div>${['all','mine','answers','none'].map(v=>`<button class="mi" role="menuitem" data-preset="${v}">${esc(t(`dock.preset.${v}`))}</button>`).join('')}<div class="msep"></div><button class="mi" role="menuitem" data-open="list">${icon('list')}${esc(t('dock.pickInSidebar'))}</button></div></div>
 <div class="spl pri"><button class="main" id="dExport" title="${esc(t('dock.exportTip'))}"></button><button class="oopen" id="dOpen" hidden title="${esc(t('side.obsOpenTip'))}" aria-label="${esc(t('dock.obsOpenLabel'))}">${icon('ext')}</button><button class="arr" data-menu="mExport" title="${esc(t('dock.kinds'))}" aria-haspopup="menu" aria-expanded="false">${icon('chev')}</button>
 <div class="menu" id="mExport" role="menu" hidden><div class="mlab">${esc(t('dock.kindsHint'))}</div>${kindMenu.map(([v,ic,sub])=>`<button class="mi" role="menuitemradio" data-kind="${v}">${icon(ic)}${esc(t(`kind.${v}.menu`))}<small data-sub="${v}">${sub?esc(t(sub)):''}</small><span class="ok">${icon('check')}</span></button>`).join('')}<div class="msep"></div><button class="mi" role="menuitem" data-open="settings">${icon('gear')}${esc(t('dock.settings'))}</button><div class="mfoot">Chat &amp; Intelligent UI Exporter for ChatGPT v${version}</div></div></div>
-<div class="spl" id="dSyncWrap" hidden><button class="main" id="dSync" title="${esc(t('set.syncNow.value'))}">${icon('refresh')}<span>${esc(t('side.syncNow'))}</span></button></div>
+<div class="spl" id="dSyncWrap" hidden><button class="main" id="dSync" title="${esc(t('side.syncNowTip'))}">${icon('refresh')}<span>${esc(t('side.syncNow'))}</span></button></div>
 </div><div class="toast" id="toast" role="status"></div></div>`;
   const closeMenus=()=>{for(const m of dui.querySelectorAll('.menu'))m.hidden=true;for(const b of dui.querySelectorAll('[data-menu]'))b.setAttribute('aria-expanded','false');};
   dui.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
@@ -644,10 +644,11 @@
   const formatSyncTime=iso=>{if(!iso)return '';const d=new Date(iso);if(Number.isNaN(d.getTime()))return '';const p=n=>String(n).padStart(2,'0');return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;};
   function syncStatusPayload(){
     const id=target().id||'';const v=cfg();const rec=id?syncStore?.getRecord(id):null;
+    const mode=AutoSync?AutoSync.getSyncMode(v):'off';
     return {
       conversationId:id,tracked:id?!!syncStore?.isTracked(id):false,record:rec,
       queueCount:Object.keys(syncStore?.getQueue()||{}).length,
-      enabled:!!v.autoSyncEnabled,scope:v.autoSyncScope,folder:v.obsidianFolder||'',subfolder:v.autoSyncSubfolder||'ChatGPT-Raw',
+      mode,enabled:mode!=='off',scope:mode==='selected'?'selected':'all',folder:v.obsidianFolder||'',subfolder:v.autoSyncSubfolder||'ChatGPT-Raw',
       busy:!!(id&&syncQueue?.isBusy(id)),
     };
   }
@@ -668,8 +669,8 @@
     bar.hidden=false;
     if(dWrap){dWrap.hidden=false;if(dBtn)dBtn.disabled=info.busy;}
     const sw=$('syncChat'),nowBtn=$('syncNow'),meta=$('syncMeta');
-    const isGlobalAll=info.enabled&&info.scope==='all';
-    sw.checked=info.tracked||isGlobalAll;sw.disabled=isGlobalAll;
+    const isGlobalAll=info.mode==='all';
+    sw.checked=isGlobalAll||(info.mode==='selected'&&info.tracked);sw.disabled=isGlobalAll;
     nowBtn.disabled=info.busy;
     const rec=info.record;
     meta.className='syncmeta';
@@ -678,7 +679,7 @@
     else if(rec?.status==='retrying'){meta.classList.add('warn');meta.textContent=t('status.syncRetrying',rec.attempt||1);}
     else if(rec?.status==='error'){meta.classList.add('err');meta.textContent=t('status.syncError',rec.error||t('err.unknown'));}
     else if(rec?.syncedAt)meta.textContent=t('status.syncLast',formatSyncTime(rec.syncedAt),rec.syncVersion||1);
-    else if(info.enabled&&(info.scope==='all'||info.tracked))meta.textContent=t('status.syncReady');
+    else if(isGlobalAll||(info.mode==='selected'&&info.tracked))meta.textContent=t('status.syncReady');
     else meta.textContent=t('status.syncOff');
   }
   async function syncConversation(task){
@@ -772,15 +773,11 @@
       const id=target().id;if(!id)return;
       const on=e.target.checked;
       await syncStore.setTracked(id,on);
-      if(on&&cfg().autoSyncEnabled)syncQueue.enqueue(id,{reason:'track_on'});
+      if(on&&AutoSync.getSyncMode(cfg())==='off')await settings.set({autoSyncMode:'selected'});
+      if(on)syncQueue.enqueue(id,{reason:'track_on'});
       updateSyncBar();
     });
-    $('syncNow')?.addEventListener('click',()=>{
-      const id=target().id;if(!id)return;
-      const rec=syncStore.getRecord(id);
-      if(rec?.status==='need_permission'){send({type:'obsidian:setup'}).catch(()=>{});return;}
-      syncQueue.enqueue(id,{force:true,interactive:false,reason:'manual'});
-    });
+    $('syncNow')?.addEventListener('click',()=>triggerSyncNow('sidebar'));
     if(resident){
       const domSig=()=>{const nodes=onScreen('[data-message-id],[data-chatgpt-search-message-ids]').filter(n=>!n.closest('[hidden],[aria-hidden="true"]'));
         const last=nodes.at(-1);return `${nodes.length}|${lastMessage()||''}|${(last?.textContent||'').length}`;};
@@ -808,7 +805,7 @@
     if(m?.type==='panel:obsidianOpen'){reply({ok:!!openSaved()});return;}
     if(m?.type==='panel:raw')return respond(ensureLoaded().then(rawExport).then(()=>({status:$('status').textContent})));
     if(m?.type==='sync:status')return respond(Promise.all([settings.ready,syncStore?.ready]).then(()=>syncStatusPayload()));
-    if(m?.type==='sync:toggleChat')return respond((async()=>{const id=target().id;if(!id||!syncStore)return syncStatusPayload();await syncStore.setTracked(id,!!m.enabled);if(m.enabled&&cfg().autoSyncEnabled)syncQueue?.enqueue(id,{reason:'popup_toggle'});updateSyncBar();return syncStatusPayload();})());
+    if(m?.type==='sync:toggleChat')return respond((async()=>{const id=target().id;if(!id||!syncStore)return syncStatusPayload();await syncStore.setTracked(id,!!m.enabled);if(m.enabled&&AutoSync.getSyncMode(cfg())==='off')await settings.set({autoSyncMode:'selected'});if(m.enabled)syncQueue?.enqueue(id,{reason:'popup_toggle'});updateSyncBar();return syncStatusPayload();})());
     if(m?.type==='sync:now')return respond((async()=>{const id=target().id;if(!id||!syncQueue)throw Error(t('err.openChat'));await syncConversation({conversationId:id,force:true,interactive:!!m.interactive});updateSyncBar();return syncStatusPayload();})());
     if(m?.type==='sync:resume'){const id=target().id;if(id&&syncQueue&&(syncStore?.getQueue()[id]||AutoSync?.shouldSyncConversation(cfg(),id,syncStore?.snapshot.tracked)))syncQueue.enqueue(id,{reason:'permission_granted'});reply({ok:true});return;}});}catch{}
   // ChatGPT switches chats without reloading the page; while the sidebar is open,

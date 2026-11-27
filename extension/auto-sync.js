@@ -43,9 +43,17 @@
     return hashString(JSON.stringify(normalized));
   }
 
+  function getSyncMode(cfg) {
+    if (cfg?.autoSyncMode === 'off' || cfg?.autoSyncMode === 'selected' || cfg?.autoSyncMode === 'all') return cfg.autoSyncMode;
+    if (cfg?.autoSyncEnabled) return cfg.autoSyncScope === 'selected' ? 'selected' : 'all';
+    return 'off';
+  }
+
   function shouldSyncConversation(cfg, conversationId, tracked = {}) {
-    if (!conversationId || !cfg?.autoSyncEnabled) return false;
-    if (cfg.autoSyncScope === 'selected') return !!tracked?.[conversationId];
+    if (!conversationId) return false;
+    const mode = getSyncMode(cfg);
+    if (mode === 'off') return false;
+    if (mode === 'selected') return !!tracked?.[conversationId];
     return true;
   }
 
@@ -327,6 +335,7 @@
     STORAGE_KEYS,
     hashString,
     computeHash,
+    getSyncMode,
     shouldSyncConversation,
     isStaleUpdate,
     createSyncStore,

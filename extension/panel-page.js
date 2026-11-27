@@ -90,8 +90,9 @@
   drawSync=function(){
     if(!syncBox||!syncInfo?.conversationId){if(syncBox)syncBox.hidden=true;return;}
     syncBox.hidden=false;
-    const isGlobalAll=!!store.values.autoSyncEnabled&&store.values.autoSyncScope==='all';
-    const checked=!!syncInfo.tracked||isGlobalAll;
+    const mode=store.values.autoSyncMode||'off';
+    const isGlobalAll=mode==='all';
+    const checked=isGlobalAll||(mode==='selected'&&!!syncInfo.tracked);
     const rec=syncInfo.record;
     let statusText=t('status.syncOff'),cls='';
     if(syncInfo.busy)statusText=t('status.syncSyncing');
@@ -99,8 +100,8 @@
     else if(rec?.status==='retrying'){statusText=t('status.syncRetrying',rec.attempt||1);cls='warn';}
     else if(rec?.status==='error'){statusText=t('status.syncError',rec.error||t('err.unknown'));cls='err';}
     else if(rec?.syncedAt)statusText=t('status.syncLast',formatSyncTime(rec.syncedAt),rec.syncVersion||1);
-    else if(store.values.autoSyncEnabled&&checked)statusText=t('status.syncReady');
-    syncBox.innerHTML=`<div class="xsync-row"><label class="xsync-lab"><input type="checkbox" class="tg" id="pSyncChat" role="switch" ${checked?'checked':''} ${isGlobalAll?'disabled':''}><span>${esc(t('side.syncChat'))}</span></label><button class="xlink" id="pSyncNow" type="button" ${syncInfo.busy?'disabled':''}>${esc(t('side.syncNow'))}</button></div><div class="xsync-meta ${cls}">${esc(statusText)}</div>`;
+    else if(checked)statusText=t('status.syncReady');
+    syncBox.innerHTML=`<div class="xsync-row"><label class="xsync-lab"><input type="checkbox" class="tg" id="pSyncChat" role="switch" ${checked?'checked':''} ${isGlobalAll?'disabled':''}><span>${esc(t('side.syncChat'))}</span></label><button class="xlink" id="pSyncNow" type="button" title="${esc(t('side.syncNowTip'))}" ${syncInfo.busy?'disabled':''}>${esc(t('side.syncNow'))}</button></div><div class="xsync-meta ${cls}">${esc(statusText)}</div>`;
     $('pSyncChat').onchange=async e=>{try{syncInfo=await call({type:'sync:toggleChat',enabled:e.target.checked});drawSync();}catch(err){say(err.message,true);}};
     $('pSyncNow').onclick=async()=>{
       if(rec?.status==='need_permission'){actions.obsFolder();window.close();return;}
