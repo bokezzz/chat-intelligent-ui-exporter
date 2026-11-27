@@ -290,6 +290,21 @@
 .syncbar{margin:10px 14px 0;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;gap:4px;flex:none}
 .synctop{display:flex;align-items:center;gap:8px}
 .synctog{display:inline-flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:12.5px;font-weight:600;cursor:pointer}
+.synccat{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px}
+.synccat-lab{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.synccat select{flex:1;min-width:140px;font-size:12px;border:1px solid color-mix(in srgb,var(--text) 24%,transparent);border-radius:6px;background:var(--bg);color:var(--text);padding:4px 6px}
+.synccat-new{display:flex;gap:6px;width:100%;margin-top:2px}
+.synccat-new input{flex:1;min-width:0;font-size:12px;border:1px solid color-mix(in srgb,var(--text) 26%,transparent);border-radius:6px;background:var(--bg);color:var(--text);padding:4px 8px}
+.catbox{padding:10px 14px 12px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);display:flex;flex-direction:column;gap:8px}
+.cathead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.cathead b{font-size:13px;font-weight:500}
+.cathead span{font-size:11.5px;color:var(--muted)}
+.catlist{display:flex;flex-wrap:wrap;gap:6px}
+.catchip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:var(--bg);border:1px solid var(--line);font-size:12px;color:var(--text)}
+.catchip button{border:0;background:none;color:var(--muted);padding:0 2px;font-size:13px;line-height:1;cursor:pointer}
+.catchip button:hover{color:var(--err)}
+.catadd{display:flex;gap:6px}
+.catadd input{flex:1;min-width:0;font-size:12px;border:1px solid color-mix(in srgb,var(--text) 26%,transparent);border-radius:6px;background:var(--surface);color:var(--text);padding:5px 8px}
 .syncmeta{font-size:11.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
 .syncmeta.warn{color:color-mix(in srgb,var(--warn) 80%,var(--text))}
 .syncmeta.err{color:color-mix(in srgb,var(--err) 75%,var(--text))}

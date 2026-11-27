@@ -123,13 +123,74 @@
       return JSON.parse(await file.text());
     } catch {return null;}
   }
+  async function getDirByPath(root, parts, create = false) {
+    let dir = root;
+    for (const part of parts) dir = await dir.getDirectoryHandle(part, {create});
+    return dir;
+  }
+  // Recursively copies all files/subfolders from srcDir into dstDir (used when migrating a synced chat).
+  async function copyDirRecursive(srcDir, dstDir) {
+    if (typeof srcDir?.entries !== 'function') return;
+    for await (const [entryName, handle] of srcDir.entries()) {
+      if (handle.kind === 'directory') {
+        const subDst = await dstDir.getDirectoryHandle(entryName, {create: true});
+        await copyDirRecursive(handle, subDst);
+      } else if (handle.kind === 'file') {
+        const file = await handle.getFile();
+        const writable = await (await dstDir.getFileHandle(entryName, {create: true})).createWritable();
+        await writable.write(file);
+        await writable.close();
+      }
+    }
+  }
+  async function removeDirIfExists(root, parentParts, folderName) {
+    if (!folderName) return false;
+    try {
+      const parent = await getDirByPath(root, parentParts, false);
+      if (typeof parent.removeEntry === 'function') {
+        await parent.removeEntry(folderName, {recursive: true});
+        return true;
+      }
+    } catch {}
+    return false;
+  }
+  // Moves an existing synced conversation folder from oldSubfolder/folderName to newSubfolder/folderName,
+  // updates metadata.json inside the moved folder, and removes the old folder.
+  async function moveSyncFolder(vault, {fromSubfolder = '', toSubfolder = '', folderName = '', category = ''} = {}) {
+    const fromParts = safePath(fromSubfolder), toParts = safePath(toSubfolder);
+    const safeName = safeSegment(folderName, '');
+    if (!safeName || fromParts.join('/') === toParts.join('/')) {
+      return {moved: false, folderName: safeName, notePath: [...toParts, safeName, 'conversation.md'].join('/')};
+    }
+    const oldParent = await getDirByPath(vault, fromParts, false);
+    const oldDir = await oldParent.getDirectoryHandle(safeName, {create: false});
+    const newParent = await getDirByPath(vault, toParts, true);
+    const newDir = await newParent.getDirectoryHandle(safeName, {create: true});
+    await copyDirRecursive(oldDir, newDir);
+    const existing = await readJsonFile(newDir, 'metadata.json');
+    if (existing) {
+      const updated = {
+        ...existing,
+        category: safePath(category).join('/'),
+        relative_path: [...toParts, safeName, 'conversation.md'].join('/'),
+        synced_at: new Date().toISOString(),
+      };
+      const writable = await (await newDir.getFileHandle('metadata.json', {create: true})).createWritable();
+      await writable.write(new Blob([JSON.stringify(updated, null, 2)], {type: 'application/json'}));
+      await writable.close();
+    }
+    await removeDirIfExists(vault, fromParts, safeName);
+    return {moved: true, folderName: safeName, notePath: [...toParts, safeName, 'conversation.md'].join('/'), metadata: existing || null};
+  }
   // Incremental auto-sync write: updates <folder>/<syncFolder>/conversation.md + metadata.json +
-  // assets/, ui/, files/ in place. Checks existing metadata.json to skip unchanged or stale writes.
+  // assets/, ui/, files/ in place. Supports migrating from meta.previousSubfolder when the user moves
+  // a conversation into a different category subfolder.
   async function writeSyncJob(vault, folder, job, log = () => {}) {
     const meta = job.meta || {};
     const subParts = safePath(folder || meta.subfolder || '');
-    let dir = vault;
-    for (const part of subParts) dir = await dir.getDirectoryHandle(part, {create: true});
+    const prevParts = meta.previousSubfolder ? safePath(meta.previousSubfolder) : null;
+    const isMigrating = !!(prevParts && meta.folderName && prevParts.join('/') !== subParts.join('/'));
+    let dir = await getDirByPath(vault, subParts, true);
     const candidates = [syncFolderName(meta), plainSegment(syncFolderName(meta), safeSegment(meta.conversationId, 'ChatGPT'))];
     let name, home;
     for (let i = 0; i < candidates.length; i++) {
@@ -137,8 +198,17 @@
       try {home = await dir.getDirectoryHandle(name, {create: true});break;}
       catch (e) {if (e?.name !== 'TypeError' || i === candidates.length - 1) throw e;log(t('obs.badName', name));}
     }
-    const existing = await readJsonFile(home, 'metadata.json');
-    const force = !!meta.force;
+    // If migrating from an old subfolder, copy any existing files (and read previous metadata) first.
+    let existing = await readJsonFile(home, 'metadata.json');
+    if (isMigrating) {
+      try {
+        const oldParent = await getDirByPath(vault, prevParts, false);
+        const oldDir = await oldParent.getDirectoryHandle(meta.folderName, {create: false});
+        if (!existing) existing = await readJsonFile(oldDir, 'metadata.json');
+        await copyDirRecursive(oldDir, home);
+      } catch {}
+    }
+    const force = !!meta.force || isMigrating;
     if (!force && existing && meta.conversationId && existing.conversation_id === meta.conversationId) {
       const oldUpdated = existing.updated_at ? Date.parse(existing.updated_at) : 0;
       const newUpdated = meta.updatedAt ? Date.parse(meta.updatedAt) : 0;
@@ -159,11 +229,14 @@
     const assetsCount = job.files.filter(f => safePath(f.path)[0] === 'assets').length;
     const uiCount = job.files.filter(f => safePath(f.path)[0] === 'ui').length;
     const filesCount = job.files.filter(f => safePath(f.path)[0] === 'files').length;
+    const notePath = [...subParts, name, 'conversation.md'].join('/');
     const metadata = {
       schema_version: 1,
       conversation_id: meta.conversationId || '',
       title: meta.rawTitle || meta.title || 'ChatGPT',
       source_url: meta.source || '',
+      category: safePath(meta.category || '').join('/'),
+      relative_path: notePath,
       created_at: meta.createdAt || existing?.created_at || syncedAt,
       updated_at: meta.updatedAt || syncedAt,
       synced_at: syncedAt,
@@ -190,7 +263,12 @@
     const metaJson = JSON.stringify(metadata, null, 2);
     await write(home, 'metadata.json', new Blob([metaJson], {type: 'application/json'}));
     bytes += metaJson.length;
-    return {name, notePath: [...subParts, name, 'conversation.md'].join('/'), files: job.files.length, bytes, renamed, skipped: null, metadata};
+    let migratedFrom = null;
+    if (isMigrating) {
+      const removed = await removeDirIfExists(vault, prevParts, meta.folderName);
+      if (removed) migratedFrom = [...prevParts, meta.folderName].join('/');
+    }
+    return {name, notePath, files: job.files.length, bytes, renamed, skipped: null, migratedFrom, metadata};
   }
 
   // The chosen folder's handle lives in this extension's IndexedDB; handles cannot go into
@@ -348,7 +426,7 @@
     refresh();
   }
 
-  const api = {CHUNK, safeSegment, safePath, uniqueName, toBase64, fromBase64, obsidianUrl, sendJob, receiver, writeJob, syncFolderName, writeSyncJob, boot};
+  const api = {CHUNK, safeSegment, safePath, uniqueName, toBase64, fromBase64, obsidianUrl, sendJob, receiver, writeJob, syncFolderName, moveSyncFolder, writeSyncJob, boot};
   root.ChatExportObsidian = api;
   if (typeof module !== 'undefined') module.exports = api;
   // The page shows the language picked in the settings (read first), or the browser's.

@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.14';
+  const version='1.2.0';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -23,7 +23,7 @@
   // The square floating panel: pick messages, export them; ⚙ shows the same settings as the toolbar panel.
   ui.innerHTML=`<style>${UI.css}${UI.pageCss}:host([hidden]){display:none!important}</style><div class="sb-backdrop" id="sbBackdrop"></div><div class="cx sb" id="sb" lang="${I18n.tag}">
 <div class="sbh"><button class="ib" id="back" title="${esc(t('side.back'))}" hidden>${icon('back')}</button><div class="logo" id="logo">${icon('logo')}</div><div class="ht"><b id="sbTitle">${esc(t('side.title'))}</b><span class="vpill" data-tip="${esc(UI.TIPS.ver)}">v${version}</span></div><button class="ib" id="reload" title="${esc(t('side.reload'))}">${icon('refresh')}</button><button class="ib" id="gear" title="${esc(t('side.settings'))}">${icon('gear')}</button><button class="ib" id="close" title="${esc(t('side.close'))}">${icon('x')}</button></div>
-<div class="view" id="listView"><div class="syncbar" id="syncBar" hidden><div class="synctop"><label class="synctog"><input type="checkbox" class="tg" id="syncChat" role="switch"><span>${esc(t('side.syncChat'))}</span></label><button class="xlink" id="syncNow" type="button">${esc(t('side.syncNow'))}</button></div><div class="syncmeta" id="syncMeta"></div></div><div class="sbf"><button class="fchip" id="all">${esc(t('side.all'))}</button><button class="fchip" id="mine">${esc(t('side.mine'))}</button><button class="fchip" id="answers">${esc(t('side.answers'))}</button><button class="fchip" id="invert">${esc(t('side.invert'))}</button><button class="fchip" id="none">${esc(t('side.none'))}</button></div>
+<div class="view" id="listView"><div class="syncbar" id="syncBar" hidden><div class="synctop"><label class="synctog"><input type="checkbox" class="tg" id="syncChat" role="switch"><span>${esc(t('side.syncChat'))}</span></label><button class="xlink" id="syncNow" type="button">${esc(t('side.syncNow'))}</button></div><div class="synccat"><span class="synccat-lab">${esc(t('side.syncCatLabel'))}</span><select id="syncCat" aria-label="${esc(t('side.syncCatLabel'))}"></select><button class="xlink" id="syncCatToggle" type="button">${esc(t('side.syncCatNew'))}</button><div class="synccat-new" id="syncCatNewRow" hidden><input id="syncCatInput" type="text" maxlength="60" placeholder="${esc(t('side.syncCatPlaceholder'))}"><button class="xlink" id="syncCatAdd" type="button">${esc(t('side.syncCatAdd'))}</button></div></div><div class="syncmeta" id="syncMeta"></div></div><div class="sbf"><button class="fchip" id="all">${esc(t('side.all'))}</button><button class="fchip" id="mine">${esc(t('side.mine'))}</button><button class="fchip" id="answers">${esc(t('side.answers'))}</button><button class="fchip" id="invert">${esc(t('side.invert'))}</button><button class="fchip" id="none">${esc(t('side.none'))}</button></div>
 <div id="list"></div>
 <div class="sbfoot"><div class="stx" id="stx"><div id="status" role="status" aria-live="polite"></div><button id="stop" disabled title="${esc(t('side.stopTip'))}">${icon('stop')}${esc(t('side.stop'))}</button></div><textarea id="output" hidden readonly aria-label="${esc(t('side.previewLabel'))}"></textarea>
 <div class="sbrow"><span id="count">${esc(t('side.count',0,0))}</span><select id="kind" aria-label="${esc(t('side.kind'))}">${kindSelect}</select><span class="opill" id="exportPill"><button id="export">${esc(t('side.export'))}</button><button class="oopen" id="obsOpen" hidden title="${esc(t('side.obsOpenTip'))}" aria-label="${esc(t('side.obsOpen'))}">${icon('ext')}<span>${esc(t('side.obsOpen'))}</span></button></span><button class="ib" id="gear2" title="${esc(t('side.settings'))}">${icon('gear')}</button></div>
@@ -667,10 +667,15 @@
   function syncStatusPayload(){
     const id=target().id||'';const v=cfg();const rec=id?syncStore?.getRecord(id):null;
     const mode=AutoSync?AutoSync.getSyncMode(v):'off';
+    const baseSub=v.autoSyncSubfolder||'ChatGPT-Raw';
+    const category=id?syncStore?.getChatCategory(id)||'':'';
+    const categories=syncStore?.getCategories()||[];
     return {
       conversationId:id,tracked:id?!!syncStore?.isTracked(id):false,record:rec,
       queueCount:Object.keys(syncStore?.getQueue()||{}).length,
-      mode,enabled:mode!=='off',scope:mode==='selected'?'selected':'all',folder:v.obsidianFolder||'',subfolder:v.autoSyncSubfolder||'ChatGPT-Raw',
+      mode,enabled:mode!=='off',scope:mode==='selected'?'selected':'all',folder:v.obsidianFolder||'',
+      subfolder:AutoSync?AutoSync.resolveSubfolder(baseSub,category):baseSub,
+      baseSubfolder:baseSub,category,categories,
       busy:!!(id&&syncQueue?.isBusy(id)),
     };
   }
@@ -724,6 +729,40 @@
       if(dBtn){dBtn.disabled=info.busy;dBtn.title=`${t('side.syncNowTip')}\n${statusLine}`;}
       if(dAuto){dAuto.disabled=isGlobalAll;dAuto.setAttribute('aria-pressed',String(isAutoOn));dAuto.title=`${t('side.syncChat')} (${isAutoOn?t('set.on'):t('set.off')})`;}
     }
+    const catSel=$('syncCat');
+    if(catSel){
+      const allCats=[...new Set([...(info.categories||[]),...(info.category?[info.category]:[])])].sort((a,b)=>a.localeCompare(b));
+      const sig=`${info.baseSubfolder}|${allCats.join('\u0000')}`;
+      if(catSel.dataset.sig!==sig){
+        catSel.dataset.sig=sig;
+        catSel.innerHTML=`<option value="">${esc(t('side.syncCatRoot',info.baseSubfolder))}</option>`+allCats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      }
+      catSel.value=info.category||'';
+      catSel.disabled=info.busy;
+    }
+    renderSettingsCategories();
+  }
+  function renderSettingsCategories(){
+    const obsAcc=$('setMain')?.querySelector('.acc[data-group="obs"] .accb');
+    if(!obsAcc||!AutoSync||!syncStore)return;
+    let box=obsAcc.querySelector('.catbox');
+    if(!box){
+      box=document.createElement('div');box.className='catbox';
+      box.innerHTML=`<div class="cathead"><b>${esc(t('set.syncCats'))}</b><span id="setCatCount"></span></div><div class="catlist" id="setCatList"></div><div class="catadd"><input id="setCatInput" type="text" maxlength="60" placeholder="${esc(t('side.syncCatPlaceholder'))}"><button class="xlink" id="setCatAdd" type="button">${esc(t('side.syncCatAdd'))}</button></div>`;
+      obsAcc.append(box);
+      const addFromSettings=async()=>{const inp=box.querySelector('#setCatInput');const val=AutoSync.normalizeCategory(inp.value);if(!val)return;await syncStore.addCategory(val);inp.value='';renderSettingsCategories();updateSyncBar();};
+      box.querySelector('#setCatAdd').onclick=addFromSettings;
+      box.querySelector('#setCatInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addFromSettings();}};
+    }
+    const cats=syncStore.getCategories();
+    box.querySelector('#setCatCount').textContent=cats.length?t('set.syncCats.count',cats.length):t('set.syncCats.empty');
+    const list=box.querySelector('#setCatList');list.replaceChildren();
+    for(const c of cats){
+      const chip=document.createElement('span');chip.className='catchip';
+      const lab=document.createElement('span');lab.textContent=c;
+      const del=document.createElement('button');del.type='button';del.textContent='×';del.onclick=async()=>{await syncStore.removeCategory(c);renderSettingsCategories();updateSyncBar();};
+      chip.append(lab,del);list.append(chip);
+    }
   }
   async function syncConversation(task){
     const {conversationId,force=false,interactive=false}=task;
@@ -749,14 +788,19 @@
     const rawCreated=syncState.raw?.create_time??syncState.messages[0]?.createTime;
     const createdAt=rawCreated?new Date(rawCreated>1e12?rawCreated:rawCreated*1000).toISOString():updatedAt;
     const existing=syncStore.getRecord(conversationId);
-    if(!force&&existing&&AutoSync.isStaleUpdate(existing,updatedAt))return {skipped:'stale'};
-    if(!force&&existing?.status==='synced'&&existing?.contentHash===contentHash)return {skipped:'unchanged'};
+    const category=syncStore.getChatCategory(conversationId);
+    const targetSubfolder=AutoSync.resolveSubfolder(v.autoSyncSubfolder||'ChatGPT-Raw',category);
+    const previousSubfolder=existing?.subfolder&&existing.subfolder!==targetSubfolder?existing.subfolder:'';
+    const effectiveForce=force||!!previousSubfolder;
+    if(!effectiveForce&&existing&&AutoSync.isStaleUpdate(existing,updatedAt))return {skipped:'stale'};
+    if(!effectiveForce&&existing?.status==='synced'&&existing?.contentHash===contentHash)return {skipped:'unchanged'};
     const id=crypto.randomUUID();
     const jobPayload={
       meta:{
-        mode:'sync',interactive,force,conversationId:syncState.conversationId,
+        mode:'sync',interactive,force:effectiveForce,conversationId:syncState.conversationId,
         title:Settings.fileBase(v,{title:syncState.title}),rawTitle:syncState.title,
-        folderName:existing?.folderName||'',subfolder:v.autoSyncSubfolder||'ChatGPT-Raw',
+        folderName:existing?.folderName||'',subfolder:targetSubfolder,
+        previousSubfolder,category,
         source:syncState.url,version,exportedAt:new Date().toISOString(),
         createdAt,updatedAt,contentHash,
         messageCount:result.items.length,messageIds:result.items.map(m=>m.id),
@@ -780,11 +824,13 @@
     if(written.url)saveNote(conversationId,written.url);
     await syncStore.dequeuePersistent(conversationId);
     await syncStore.updateRecord(conversationId,{
-      force,status:'synced',folderName:written.folderName||existing?.folderName||'',
+      force:effectiveForce,status:'synced',folderName:written.folderName||existing?.folderName||'',
+      category,subfolder:targetSubfolder,
       contentHash,updatedAt,syncedAt:written.metadata?.synced_at||new Date().toISOString(),
       syncVersion:written.metadata?.sync_version||((existing?.syncVersion||0)+1),
       messageCount:result.items.length,path:written.path||existing?.path||'',error:'',
     });
+    if(previousSubfolder&&resident)toast(t('status.syncMigrated',targetSubfolder));
     return written;
   }
   if(AutoSync){
@@ -821,6 +867,31 @@
       updateSyncBar();
     });
     $('syncNow')?.addEventListener('click',()=>triggerSyncNow('sidebar'));
+    const applyCategoryChange=async nextCat=>{
+      const id=target().id;if(!id)return;
+      const existing=syncStore.getRecord(id);
+      const clean=await syncStore.setChatCategory(id,nextCat);
+      const nextSub=AutoSync.resolveSubfolder(cfg().autoSyncSubfolder||'ChatGPT-Raw',clean);
+      updateSyncBar();
+      if(existing?.folderName&&existing.subfolder!==nextSub){
+        if(resident)toast(t('status.syncMigrating'),true);
+        syncQueue.enqueue(id,{force:true,interactive:false,reason:'migrate'});
+      }
+    };
+    $('syncCat')?.addEventListener('change',e=>applyCategoryChange(e.target.value));
+    $('syncCatToggle')?.addEventListener('click',()=>{
+      const row=$('syncCatNewRow');if(!row)return;
+      row.hidden=!row.hidden;
+      if(!row.hidden)$('syncCatInput')?.focus();
+    });
+    const addInlineCategory=async()=>{
+      const inp=$('syncCatInput');if(!inp)return;
+      const clean=AutoSync.normalizeCategory(inp.value);if(!clean)return;
+      inp.value='';$('syncCatNewRow').hidden=true;
+      await applyCategoryChange(clean);
+    };
+    $('syncCatAdd')?.addEventListener('click',addInlineCategory);
+    $('syncCatInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addInlineCategory();}});
     if(resident){
       const domSig=()=>{const nodes=onScreen('[data-message-id],[data-chatgpt-search-message-ids]').filter(n=>!n.closest('[hidden],[aria-hidden="true"]'));
         const last=nodes.at(-1);return `${nodes.length}|${lastMessage()||''}|${(last?.textContent||'').length}`;};

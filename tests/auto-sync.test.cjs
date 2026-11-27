@@ -9,7 +9,17 @@ const AutoSync = require('../extension/auto-sync.js');
 function memFolder(name = 'vault') {
   const dirs = new Map(), files = new Map();
   return {
+    kind: 'directory',
     name, dirs, files,
+    async *entries() {
+      for (const [k, v] of dirs.entries()) yield [k, v];
+      for (const [k, v] of files.entries()) yield [k, {kind: 'file', name: k, async getFile() {return v;}}];
+    },
+    async removeEntry(n) {
+      if (dirs.has(n)) {dirs.delete(n);return;}
+      if (files.has(n)) {files.delete(n);return;}
+      throw Object.assign(Error('missing'), {name: 'NotFoundError'});
+    },
     async getDirectoryHandle(n, {create = false} = {}) {
       if (!dirs.has(n)) {
         if (!create) throw Object.assign(Error('missing'), {name: 'NotFoundError'});
@@ -20,6 +30,7 @@ function memFolder(name = 'vault') {
     async getFileHandle(n, {create = false} = {}) {
       if (!files.has(n) && !create) throw Object.assign(Error('missing'), {name: 'NotFoundError'});
       return {
+        kind: 'file',
         async getFile() {
           const blob = files.get(n);
           if (!blob) throw Object.assign(Error('missing'), {name: 'NotFoundError'});
@@ -330,4 +341,52 @@ test('prismVizBlock builds a CSP-safe interactive Prism viz block that updates s
   await new Promise(r => setTimeout(r, 15));
   assert.match(w.document.getElementById('root').textContent, /Count: 2/);
   dom.window.close();
+});
+
+test('writeSyncJob migrates an existing synced chat folder to a new category subfolder and removes the old folder', async () => {
+  const vault = memFolder('MyVault');
+  const convId = 'mig-87654321-bbbb';
+  const hash = AutoSync.computeHash({conversationId: convId, title: 'OS Notes', messages: [{id: 'm1', role: 'assistant', md: 'Paging'}]});
+  // Initial sync into ChatGPT-Raw root.
+  const first = await ob.writeSyncJob(vault, 'ChatGPT-Raw', {
+    meta: {
+      mode: 'sync', conversationId: convId, title: 'OS Notes', rawTitle: 'OS Notes',
+      source: `https://chatgpt.com/c/${convId}`, version: '1.2.0',
+      updatedAt: '2026-11-27T10:00:00.000Z', contentHash: hash, messageCount: 1, messageIds: ['m1'],
+    },
+    md: '# OS Notes\n\nPaging\n',
+    files: [{path: 'assets/pic.png', blob: new Blob(['img'], {type: 'image/png'})}],
+  });
+  assert.ok(at(vault, `ChatGPT-Raw/${first.name}/assets/pic.png`));
+
+  // Migrate to ChatGPT-Raw/408/OS with same content hash.
+  const migrated = await ob.writeSyncJob(vault, 'ChatGPT-Raw/408/OS', {
+    meta: {
+      mode: 'sync', conversationId: convId, title: 'OS Notes', rawTitle: 'OS Notes',
+      folderName: first.name, subfolder: 'ChatGPT-Raw/408/OS', previousSubfolder: 'ChatGPT-Raw', category: '408/OS',
+      source: `https://chatgpt.com/c/${convId}`, version: '1.2.0',
+      updatedAt: '2026-11-27T10:00:00.000Z', contentHash: hash, messageCount: 1, messageIds: ['m1'],
+    },
+    md: '# OS Notes\n\nPaging\n',
+    files: [],
+  });
+  assert.equal(migrated.skipped, null);
+  assert.equal(migrated.migratedFrom, `ChatGPT-Raw/${first.name}`);
+  assert.equal(migrated.metadata.category, '408/OS');
+  assert.equal(migrated.metadata.sync_version, 2);
+  assert.equal(await at(vault, `ChatGPT-Raw/408/OS/${first.name}/conversation.md`).text(), '# OS Notes\n\nPaging\n');
+  assert.equal(await at(vault, `ChatGPT-Raw/408/OS/${first.name}/assets/pic.png`).text(), 'img');
+  // Old folder removed cleanly.
+  assert.equal(vault.dirs.get('ChatGPT-Raw').dirs.has(first.name), false);
+
+  // SyncStore category management and per-chat binding.
+  const store = AutoSync.createSyncStore();
+  await store.ready;
+  await store.addCategory('408/OS');
+  await store.setChatCategory(convId, '408/OS');
+  assert.deepEqual(store.getCategories(), ['408/OS']);
+  assert.equal(store.getChatCategory(convId), '408/OS');
+  assert.equal(AutoSync.resolveSubfolder('ChatGPT-Raw', '408/OS'), 'ChatGPT-Raw/408/OS');
+  await store.removeCategory('408/OS');
+  assert.deepEqual(store.getCategories(), []);
 });

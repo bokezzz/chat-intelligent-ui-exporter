@@ -8,7 +8,24 @@
     state: 'chatExportSyncState',
     tracked: 'chatExportSyncTracked',
     queue: 'chatExportSyncQueue',
+    categories: 'chatExportSyncCategories',
+    chatCategory: 'chatExportSyncChatCategory',
   };
+
+  function normalizeCategory(cat) {
+    return String(cat ?? '')
+      .replace(/\\/g, '/')
+      .split('/')
+      .map(s => s.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, '_'))
+      .filter(s => s && s !== '.' && s !== '..')
+      .join('/');
+  }
+
+  function resolveSubfolder(baseSubfolder, category) {
+    const base = normalizeCategory(baseSubfolder || 'ChatGPT-Raw') || 'ChatGPT-Raw';
+    const cat = normalizeCategory(category || '');
+    return cat ? `${base}/${cat}` : base;
+  }
 
   // Deterministic 64-bit hex hash (two independent 32-bit FNV-1a passes) so content
   // deduplication works synchronously in both Chrome and Node tests.
@@ -75,18 +92,20 @@
 
   // Shared state store backed by chrome.storage.local (falls back to memory in isolated tests).
   function createSyncStore(area = null, events = null) {
-    let state = {}, tracked = {}, queue = {};
+    let state = {}, tracked = {}, queue = {}, categories = [], chatCategory = {};
     const listeners = new Set();
-    const emit = () => {for (const fn of listeners) {try {fn({state, tracked, queue});} catch (e) {console.error(e);}}};
+    const emit = () => {for (const fn of listeners) {try {fn({state, tracked, queue, categories, chatCategory});} catch (e) {console.error(e);}}};
     const readArea = async () => {
-      if (!area) return {state, tracked, queue};
+      if (!area) return {state, tracked, queue, categories, chatCategory};
       try {
-        const res = await area.get([STORAGE_KEYS.state, STORAGE_KEYS.tracked, STORAGE_KEYS.queue]) || {};
+        const res = await area.get(Object.values(STORAGE_KEYS)) || {};
         state = res[STORAGE_KEYS.state] || {};
         tracked = res[STORAGE_KEYS.tracked] || {};
         queue = res[STORAGE_KEYS.queue] || {};
+        categories = Array.isArray(res[STORAGE_KEYS.categories]) ? res[STORAGE_KEYS.categories] : [];
+        chatCategory = res[STORAGE_KEYS.chatCategory] || {};
       } catch {}
-      return {state, tracked, queue};
+      return {state, tracked, queue, categories, chatCategory};
     };
     const ready = readArea().then(v => {emit();return v;});
     if (events?.addListener) {
@@ -96,32 +115,57 @@
         if (STORAGE_KEYS.state in changes) {state = changes[STORAGE_KEYS.state].newValue || {};hit = true;}
         if (STORAGE_KEYS.tracked in changes) {tracked = changes[STORAGE_KEYS.tracked].newValue || {};hit = true;}
         if (STORAGE_KEYS.queue in changes) {queue = changes[STORAGE_KEYS.queue].newValue || {};hit = true;}
+        if (STORAGE_KEYS.categories in changes) {categories = Array.isArray(changes[STORAGE_KEYS.categories].newValue) ? changes[STORAGE_KEYS.categories].newValue : [];hit = true;}
+        if (STORAGE_KEYS.chatCategory in changes) {chatCategory = changes[STORAGE_KEYS.chatCategory].newValue || {};hit = true;}
         if (hit) emit();
       });
     }
-    async function writeKey(key, updater) {
+    async function writeKey(key, updater, isArray = false) {
       if (area) {
         try {
-          const cur = (await area.get(key))?.[key] || {};
-          const next = updater({...cur});
+          const raw = (await area.get(key))?.[key];
+          const cur = isArray ? (Array.isArray(raw) ? [...raw] : []) : {...(raw || {})};
+          const next = updater(cur);
           await area.set({[key]: next});
           if (key === STORAGE_KEYS.state) state = next;
           else if (key === STORAGE_KEYS.tracked) tracked = next;
           else if (key === STORAGE_KEYS.queue) queue = next;
+          else if (key === STORAGE_KEYS.categories) categories = next;
+          else if (key === STORAGE_KEYS.chatCategory) chatCategory = next;
           emit();
           return next;
         } catch {}
       }
       if (key === STORAGE_KEYS.state) {state = updater({...state});emit();return state;}
       if (key === STORAGE_KEYS.tracked) {tracked = updater({...tracked});emit();return tracked;}
+      if (key === STORAGE_KEYS.categories) {categories = updater([...categories]);emit();return categories;}
+      if (key === STORAGE_KEYS.chatCategory) {chatCategory = updater({...chatCategory});emit();return chatCategory;}
       queue = updater({...queue});emit();return queue;
     }
     return {
       ready,
-      get snapshot() {return {state, tracked, queue};},
+      get snapshot() {return {state, tracked, queue, categories, chatCategory};},
       getRecord: id => state[id] || null,
       isTracked: id => !!tracked[id],
       getQueue: () => ({...queue}),
+      getCategories: () => [...categories],
+      getChatCategory: id => (id ? chatCategory[id] || state[id]?.category || '' : ''),
+      addCategory: name => {
+        const clean = normalizeCategory(name);
+        if (!clean) return Promise.resolve([...categories]);
+        return writeKey(STORAGE_KEYS.categories, list => list.includes(clean) ? list : [...list, clean].sort((a, b) => a.localeCompare(b)), true);
+      },
+      removeCategory: name => {
+        const clean = normalizeCategory(name);
+        return writeKey(STORAGE_KEYS.categories, list => list.filter(x => x !== clean), true);
+      },
+      setChatCategory: async (id, name) => {
+        if (!id) return '';
+        const clean = normalizeCategory(name);
+        if (clean) await writeKey(STORAGE_KEYS.categories, list => list.includes(clean) ? list : [...list, clean].sort((a, b) => a.localeCompare(b)), true);
+        await writeKey(STORAGE_KEYS.chatCategory, m => {if (clean) m[id] = clean; else delete m[id];return m;});
+        return clean;
+      },
       setTracked: (id, on) => writeKey(STORAGE_KEYS.tracked, m => {if (on) m[id] = true; else delete m[id];return m;}),
       updateRecord: (id, patch) => writeKey(STORAGE_KEYS.state, m => {
         const prev = m[id] || {};
@@ -333,6 +377,8 @@
 
   const api = {
     STORAGE_KEYS,
+    normalizeCategory,
+    resolveSubfolder,
     hashString,
     computeHash,
     getSyncMode,
