@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.7';
+  const version='1.1.8';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -28,7 +28,7 @@
 <div class="sbfoot"><div class="stx" id="stx"><div id="status" role="status" aria-live="polite"></div><button id="stop" disabled title="${esc(t('side.stopTip'))}">${icon('stop')}${esc(t('side.stop'))}</button></div><textarea id="output" hidden readonly aria-label="${esc(t('side.previewLabel'))}"></textarea>
 <div class="sbrow"><span id="count">${esc(t('side.count',0,0))}</span><select id="kind" aria-label="${esc(t('side.kind'))}">${kindSelect}</select><span class="opill" id="exportPill"><button id="export">${esc(t('side.export'))}</button><button class="oopen" id="obsOpen" hidden title="${esc(t('side.obsOpenTip'))}" aria-label="${esc(t('side.obsOpen'))}">${icon('ext')}<span>${esc(t('side.obsOpen'))}</span></button></span><button class="ib" id="gear2" title="${esc(t('side.settings'))}">${icon('gear')}</button></div>
 <div class="ftl"><button class="lnk" id="preview">${icon('eye')}<span>${esc(t('side.preview'))}</span></button><span class="fname" id="fname"></span><button class="lnk" id="useFolder" hidden>${esc(t('side.htmlBig'))}</button></div></div></div>
-<div class="view setview" id="setView" hidden></div></div>`;
+<div class="view setview" id="setView" hidden><nav class="setnav" id="setNav"></nav><div class="setmain" id="setMain"></div></div></div>`;
   const $=id=>ui.getElementById(id),route=()=>location.origin+location.pathname,seconds=ms=>(ms/1000).toFixed(2);
   let state=null,busyFlag=false,generation=0,controller,readRoute=null;
   const htmlCards=()=>cfg().htmlCards,escapeProseHtml=()=>cfg().proseHtml==='escape';
@@ -528,16 +528,37 @@
     text.textContent=(m.staticMd||m.md||m.summary||'').replace(/\u0000[^\u0000]*\u0000/g,'').replace(/\*\*|^#{1,6}\s+|^>\s?/gm,'').replace(/\s+/g,' ').trim().slice(0,600);
     body.append(top,text);label.append(box,body);return label;}
   // The sidebar's two views: the message list, and the settings (the toolbar panel's, in place).
+  const navIcons={obs:'gem',def:'archive',md:'file',name:'code',btns:'list',adv:'gear'};
+  let activeSetTab='obs';
+  function selectSetTab(key){
+    activeSetTab=key||'obs';
+    const main=$('setMain'),nav=$('setNav');
+    if(!main||!nav)return;
+    main.dataset.tab=activeSetTab;
+    for(const acc of main.querySelectorAll('.acc')){
+      const on=acc.dataset.group===activeSetTab;
+      acc.dataset.groupActive=on?'1':'0';
+      if(on)panelSettings.setOpen(acc.dataset.group,true);
+    }
+    for(const b of nav.querySelectorAll('button[data-nav]'))b.classList.toggle('on',b.dataset.nav===activeSetTab);
+  }
   function showView(view){const set=view==='settings';$('listView').hidden=set;$('setView').hidden=!set;$('back').hidden=!set;$('logo').hidden=set;$('reload').hidden=set;$('gear').hidden=set;$('sbTitle').textContent=set?t('side.settings'):t('side.title');
-    if(set){const k=$('kind').value;panelSettings.setOpen(k==='html'?'def':k==='pdf'?'name':k==='obsidian'?'obs':'md',true);}}
+    if(set)selectSetTab(activeSetTab||'obs');}
   function openSidebar(view='list'){host.hidden=false;showView(view);placeDock();fitPill();if(!busyFlag&&route()!==readRoute&&!streaming())load();}
   function closeSidebar(){host.hidden=true;placeDock();}
   $('close').onclick=closeSidebar;$('sbBackdrop').onclick=closeSidebar;$('gear').onclick=$('gear2').onclick=()=>showView('settings');$('back').onclick=()=>showView('list');
-  const panelSettings=UI.mountSettings($('setView'),settings,{
+  const panelSettings=UI.mountSettings($('setMain'),settings,{
     action:name=>{if(name==='raw')rawExport();else if(name==='obsFolder')send({type:'obsidian:setup'}).catch(e=>fail(e.message));else if(name==='reset')settings.reset();else if(name==='shortcut')send({type:'open:shortcuts'}).catch(e=>fail(e.message));},
     // A page script cannot open extension pages; the background opens the explanation in a new tab.
     help:topic=>send({type:'open:help',topic}).catch(e=>fail(e.message)),
     commands:()=>send({type:'commands:get'}).then(r=>r.commands)});
+  (()=>{const nav=$('setNav'),main=$('setMain');if(!nav||!main)return;
+    for(const acc of main.querySelectorAll('.acc')){
+      const key=acc.dataset.group,label=acc.querySelector('.acch .lab b')?.textContent||key;
+      const b=document.createElement('button');b.type='button';b.dataset.nav=key;b.innerHTML=`${icon(navIcons[key]||'gear')}<span>${esc(label)}</span>`;
+      b.onclick=()=>selectSetTab(key);nav.append(b);
+    }
+    selectSetTab('obs');})();
   UI.attachTips(ui,$('sb'));
   // Status lines that end an export with problems are marked; with the sidebar closed they show above the buttons.
   let lastError='',lastWarn='';function fail(message){lastError=message;$('status').textContent=message;}

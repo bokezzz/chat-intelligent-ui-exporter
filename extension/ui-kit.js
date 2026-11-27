@@ -41,6 +41,15 @@
   // Each row: the setting's name, then what it is set to now. What a setting does goes in ⓘ.
   const kindOptions=()=>['md','zip','html','pdf','obsidian'].map(k=>[k,kindLabel(k)]);
   const groups=()=>[
+    {key:'obs',title:'Obsidian',summary:v=>v.obsidianFolder?(v.autoSyncMode!=='off'?t('set.obs.syncOn',v.obsidianFolder):t('set.obs.summary',v.obsidianFolder)):t('set.obs.none'),rows:[
+      {key:'obsFolder',label:t('set.obsFolder'),tip:'obs',value:v=>v.obsidianFolder?`${v.obsidianFolder} /`:t('set.obsFolder.none'),chip:v=>!!v.obsidianFolder,control:'button',text:t('set.obsFolder.button')},
+      {key:'autoSyncSubfolder',label:t('set.autoSyncSubfolder'),value:v=>v.autoSyncSubfolder||'ChatGPT-Raw',mono:true,control:'text',width:130},
+      {key:'autoSyncMode',label:t('set.autoSyncMode'),value:v=>v.autoSyncMode==='all'?t('set.autoSyncMode.all'):v.autoSyncMode==='selected'?t('set.autoSyncMode.selected'):t('set.autoSyncMode.off'),control:'seg',options:[['off',t('set.off')],['selected',t('set.autoSyncMode.selectedShort')],['all',t('set.autoSyncMode.allShort')]]},
+      {key:'autoSyncPrismCards',label:t('set.autoSyncPrismCards'),value:onOff('set.autoSyncPrismCards.on'),control:'switch'},
+      {key:'autoSyncImages',label:t('set.autoSyncImages'),value:onOff('set.on'),control:'switch'},
+      {key:'autoSyncAttachments',label:t('set.autoSyncAttachments'),value:onOff('set.on'),control:'switch'},
+      {key:'autoSyncUi',label:t('set.autoSyncUi'),value:onOff('set.on'),control:'switch'},
+    ]},
     {key:'def',title:t('set.def'),summary:v=>`${kindLabel(v.exportKind)} · ${profileName(v)}`,rows:[
       {key:'exportKind',label:t('set.exportKind'),value:v=>kindLabel(v.exportKind),control:'select',options:kindOptions()},
       {key:'profile',label:t('set.profile'),tip:'profile',value:profileName,control:'seg',options:[['generic',t('set.profile.genericShort')],['obsidian','Obsidian']]},
@@ -49,11 +58,6 @@
       {key:'autoClose',label:t('set.autoClose'),value:onOff('set.on'),control:'switch'},
       // In each language with "Language" after it, so a page in a language one cannot read still shows where to change it.
       {key:'language',label:t('set.language')==='Language'?'Language':`${t('set.language')} · Language`,tip:'language',value:languageName,control:'select',options:[['auto',t('set.language.autoShort')],...I18n.LOCALES.map(l=>[l,I18n.NAMES[l]])]},
-    ]},
-    {key:'name',title:t('set.name'),summary:v=>`${S.fileNames[v.fileName]}${v.fileVersion?t('set.name.withVersion'):''}`,rows:[
-      {key:'fileName',label:t('set.fileName'),value:(v,ctx)=>t('set.fileName.example',ctx.example(v)),mono:true,wrap:true,control:'select',options:Object.entries(S.fileNames)},
-      {key:'filePrefix',label:t('set.filePrefix'),dep:true,hidden:v=>v.fileName!=='prefix',control:'text',width:120},
-      {key:'fileVersion',label:t('set.fileVersion'),tip:'fver',value:v=>v.fileVersion?t('set.fileVersion.on',S.version):t('set.off'),control:'switch'},
     ]},
     {key:'md',title:t('set.md'),summary:v=>t('set.md.summary',['yaml','model','timestamps','sources'].filter(k=>v[k]).length,v.proseHtml==='keep'?t('set.proseHtml.keepShort'):t('set.proseHtml.escapeShort')),rows:[
       {key:'yaml',label:t('set.yaml'),tip:'yaml',value:onOff('set.yaml.on','set.yaml.off'),control:'switch'},
@@ -64,14 +68,10 @@
       {key:'sources',label:t('set.sources'),tip:'pending',value:onOff('set.sources.on'),control:'switch'},
       {key:'roles',label:t('set.roles'),control:'roles'},
     ]},
-    {key:'obs',title:'Obsidian',summary:v=>v.obsidianFolder?(v.autoSyncMode!=='off'?t('set.obs.syncOn',v.obsidianFolder):t('set.obs.summary',v.obsidianFolder)):t('set.obs.none'),rows:[
-      {key:'obsFolder',label:t('set.obsFolder'),tip:'obs',value:v=>v.obsidianFolder?`${v.obsidianFolder} /`:t('set.obsFolder.none'),chip:v=>!!v.obsidianFolder,control:'button',text:t('set.obsFolder.button')},
-      {key:'autoSyncSubfolder',label:t('set.autoSyncSubfolder'),value:v=>v.autoSyncSubfolder||'ChatGPT-Raw',mono:true,control:'text',width:130},
-      {key:'autoSyncMode',label:t('set.autoSyncMode'),value:v=>v.autoSyncMode==='all'?t('set.autoSyncMode.all'):v.autoSyncMode==='selected'?t('set.autoSyncMode.selected'):t('set.autoSyncMode.off'),control:'seg',options:[['off',t('set.off')],['selected',t('set.autoSyncMode.selectedShort')],['all',t('set.autoSyncMode.allShort')]]},
-      {key:'autoSyncPrismCards',label:t('set.autoSyncPrismCards'),value:onOff('set.autoSyncPrismCards.on'),control:'switch'},
-      {key:'autoSyncImages',label:t('set.autoSyncImages'),value:onOff('set.on'),control:'switch'},
-      {key:'autoSyncAttachments',label:t('set.autoSyncAttachments'),value:onOff('set.on'),control:'switch'},
-      {key:'autoSyncUi',label:t('set.autoSyncUi'),value:onOff('set.on'),control:'switch'},
+    {key:'name',title:t('set.name'),summary:v=>`${S.fileNames[v.fileName]}${v.fileVersion?t('set.name.withVersion'):''}`,rows:[
+      {key:'fileName',label:t('set.fileName'),value:(v,ctx)=>t('set.fileName.example',ctx.example(v)),mono:true,wrap:true,control:'select',options:Object.entries(S.fileNames)},
+      {key:'filePrefix',label:t('set.filePrefix'),dep:true,hidden:v=>v.fileName!=='prefix',control:'text',width:120},
+      {key:'fileVersion',label:t('set.fileVersion'),tip:'fver',value:v=>v.fileVersion?t('set.fileVersion.on',S.version):t('set.off'),control:'switch'},
     ]},
     {key:'btns',title:t('set.btns'),summary:v=>v.dockShow?t('set.btns.shown',v.dockPos==='corner'?t('set.dockPos.corner'):t('set.dockPos.input')):t('set.btns.hidden'),rows:[
       {key:'dockShow',label:t('set.dockShow'),value:onOff('set.dockShow.on','set.dockShow.off'),control:'switch'},
@@ -271,7 +271,7 @@
   const pageCss=`
 :host{all:initial}
 .sb-backdrop{position:fixed;inset:0;z-index:2147483645;background:rgba(15,17,20,.32);backdrop-filter:blur(2px)}
-.sb{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(640px,calc(100vw - 48px));height:min(580px,calc(100vh - 48px));z-index:2147483646;background:var(--bg);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.22),0 4px 16px rgba(0,0,0,.08);display:flex;flex-direction:column;overflow:hidden}
+.sb{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(680px,calc(100vw - 48px));height:min(560px,calc(100vh - 48px));z-index:2147483646;background:var(--bg);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.22),0 4px 16px rgba(0,0,0,.08);display:flex;flex-direction:column;overflow:hidden}
 .sbh{display:flex;align-items:center;gap:8px;padding:12px 12px 12px 16px;background:var(--surface);border-bottom:1px solid var(--line);flex:none}
 .sbh .ib{border-radius:8px}
 .sbh .ht{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
@@ -335,16 +335,29 @@
 .lnk .ic{width:14px;height:14px}
 .lnk:disabled{opacity:.45;cursor:default}
 #output{width:100%;height:120px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:11.5px/1.5 ui-monospace,Consolas,monospace;padding:8px;resize:vertical}
-.setview{flex:1;min-height:0;overflow:auto;background:var(--bg);padding:8px 14px 16px}
-.setview .xsec{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:8px}
-.setview .xgh{padding:10px 4px 6px}
-.setview .acc{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
-.setview .acc.open{background:var(--surface);margin:0 0 8px;border-radius:10px}
-.setview .acc.open>.acch{padding-left:14px;padding-right:14px;border-bottom:1px solid var(--line)}
-.setview .acc.open .accb .xrow{padding-left:14px;padding-right:14px}
-.setview .acc.open .accb .xrow.dep{padding-left:26px}
-.setview .seg2{border-radius:8px}
-.setview .seg2 button{border-radius:6px}
+.setview{flex:1;min-height:0;display:flex;flex-direction:row;overflow:hidden;background:var(--bg)}
+.setnav{width:168px;flex:none;background:var(--surface);border-right:1px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:4px;overflow:auto}
+.setnav button{border:0;background:transparent;border-radius:8px;padding:9px 10px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--muted);text-align:left;width:100%;transition:background .12s,color .12s}
+.setnav button:hover{background:color-mix(in srgb,var(--text) 5%,transparent);color:var(--text)}
+.setnav button.on{background:color-mix(in srgb,var(--pri) 16%,var(--surface));color:var(--pri-deep);font-weight:600}
+.setnav button .ic{width:15px;height:15px;opacity:.85}
+.setmain{flex:1;min-width:0;overflow:auto;padding:14px 16px 18px}
+.setmain .xgh{display:none}
+.setmain .xsec{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.setmain .acc{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.setmain .acc.open{background:var(--surface);margin:0 0 10px;border-radius:10px}
+.setmain .acc>.acch{padding:12px 14px;cursor:default;pointer-events:none;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--pri) 5%,var(--surface))}
+.setmain .acc>.acch .go{display:none}
+.setmain .acc>.acch .lab b{font-size:14px;font-weight:600}
+.setmain .acc .accb{padding:4px 0 6px}
+.setmain .acc .accb .xrow{padding:8px 14px;min-height:46px}
+.setmain .acc .accb .xrow+.xrow{border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.setmain .acc .accb .xrow.dep{padding-left:26px}
+.setmain .seg2{border-radius:8px}
+.setmain .seg2 button{border-radius:6px}
+.setmain[data-tab] .acc:not([data-group-active="1"]){display:none}
+.setmain[data-tab]:not([data-tab="def"]) .xsec{display:none}
+@media (max-width:560px){.setview{flex-direction:column}.setnav{width:auto;flex-direction:row;border-right:0;border-bottom:1px solid var(--line);padding:8px}.setnav button{width:auto;white-space:nowrap}}
 .dock{position:fixed;z-index:2147483645;display:flex;flex-direction:column;gap:6px;min-width:132px;align-items:stretch}
 .dock.narrow{min-width:0}
 .dock.narrow .spl .main span,.dock.narrow .spl .main small{display:none}
