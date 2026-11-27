@@ -375,8 +375,7 @@
 .spl.pri:hover{box-shadow:0 4px 14px color-mix(in srgb,var(--pri) 36%,transparent)}
 .spl.pri>button:hover:not(:disabled){background:rgba(255,255,255,.1)}
 .spl.pri .arr{border-left-color:color-mix(in srgb,var(--onpri) 28%,transparent)}
-.spl.pri>.oopen{background:transparent;color:inherit;border-radius:0;border-left:1px solid color-mix(in srgb,var(--onpri) 28%,transparent);padding:8px 9px;font-size:12.5px}
-.spl.pri>.oopen:disabled{color:inherit;opacity:.5}
+.spl.pri>.oopen{display:none!important}
 .spl.sync{background:color-mix(in srgb,var(--pri) 10%,var(--surface));border-color:color-mix(in srgb,var(--pri) 32%,var(--line))}
 .spl.sync .sdot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none;transition:background .15s,box-shadow .15s}
 .spl.sync.on .sdot{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
