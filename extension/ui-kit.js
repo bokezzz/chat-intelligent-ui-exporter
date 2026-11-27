@@ -311,7 +311,11 @@
 .chatbar input{flex:1;min-width:0;font-size:12.5px;border:1px solid color-mix(in srgb,var(--text) 24%,transparent);border-radius:7px;background:var(--bg);color:var(--text);padding:6px 10px}
 .chatlist{display:flex;flex-direction:column;gap:6px}
 .chatitem{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:color-mix(in srgb,var(--bg) 45%,var(--surface))}
+.chatitem[draggable="true"]{cursor:grab}
 .chatitem:hover{border-color:color-mix(in srgb,var(--pri) 42%,var(--line))}
+.chatitem.dragging{opacity:.42;cursor:grabbing;border-style:dashed}
+.chatgrip{width:10px;height:14px;flex:none;color:var(--muted);opacity:.55;background:radial-gradient(circle,currentColor 1.2px,transparent 1.4px) 0 0/5px 5px;cursor:grab}
+.chatitem:hover .chatgrip{opacity:.9}
 .chatinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .chattitle{font-size:13px;font-weight:500;color:var(--text);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chattitle:hover{color:var(--pri-deep);text-decoration:underline}
@@ -320,8 +324,9 @@
 .chatempty{padding:24px 12px;text-align:center;color:var(--muted);font-size:12.5px}
 .chattree{display:flex;flex-direction:column;gap:4px}
 .chattree-node{display:flex;flex-direction:column;gap:4px}
-.chattree-head{display:flex;align-items:center;gap:6px;width:100%;border:0;background:color-mix(in srgb,var(--text) 4%,transparent);border-radius:7px;padding:6px 9px;font-size:12.5px;font-weight:600;color:var(--text);text-align:left;transition:background .12s}
+.chattree-head{display:flex;align-items:center;gap:6px;width:100%;border:0;background:color-mix(in srgb,var(--text) 4%,transparent);border-radius:7px;padding:6px 9px;font-size:12.5px;font-weight:600;color:var(--text);text-align:left;transition:background .12s,outline-color .12s}
 .chattree-head:hover{background:color-mix(in srgb,var(--pri) 12%,transparent)}
+.chattree-head.drop-over{background:color-mix(in srgb,var(--pri) 22%,var(--surface));outline:2px dashed var(--pri);outline-offset:-2px}
 .chattree-head .tchev{width:14px;height:14px;color:var(--muted);flex:none;transition:transform .15s}
 .chattree-node.collapsed>.chattree-head .tchev{transform:rotate(-90deg)}
 .chattree-head .tic{width:14px;height:14px;color:var(--pri-deep);flex:none}

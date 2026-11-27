@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.3.1';
+  const version='1.3.2';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -848,10 +848,32 @@
       for(const ch of node.children.values())n+=totalCount(ch);
       return n;
     };
+    let draggingChat=null,hoverExpandTimer=null;
+    const clearDropHighlight=()=>{clearTimeout(hoverExpandTimer);hoverExpandTimer=null;for(const el of list.querySelectorAll('.drop-over'))el.classList.remove('drop-over');};
+    const moveChatToCategory=async(cid,rec,nextCat,selEl=null)=>{
+      const fromSub=rec.subfolder||AutoSync.resolveSubfolder(base,rec.category||'');
+      const toSub=AutoSync.resolveSubfolder(base,nextCat);
+      if(selEl)selEl.disabled=true;
+      try{
+        await syncStore.setChatCategory(cid,nextCat);
+        collapsedChatDirs.delete(nextCat);
+        if(fromSub!==toSub){
+          if(resident)toast(t('status.syncMigrating'),true);
+          await send({type:'obsidian:move',base,from:fromSub,to:toSub,folder:rec.folderName,cat:nextCat,cid});
+        }else if(resident){
+          toast(t('status.syncMigrated',toSub));
+        }
+      }catch(e){
+        if(resident)toast(e?.message||String(e));
+      }finally{
+        if(selEl)selEl.disabled=false;
+      }
+    };
     const buildChatRow=({cid,rec,cat})=>{
-      const row=document.createElement('div');row.className='chatitem';
+      const row=document.createElement('div');row.className='chatitem';row.draggable=true;
+      const grip=document.createElement('span');grip.className='chatgrip';grip.setAttribute('aria-hidden','true');
       const info=document.createElement('div');info.className='chatinfo';
-      const a=document.createElement('a');a.className='chattitle';a.href=rec.sourceUrl||`https://chatgpt.com/c/${encodeURIComponent(cid)}`;a.target='_blank';a.rel='noopener noreferrer';
+      const a=document.createElement('a');a.className='chattitle';a.href=rec.sourceUrl||`https://chatgpt.com/c/${encodeURIComponent(cid)}`;a.target='_blank';a.rel='noopener noreferrer';a.draggable=false;
       a.textContent=rec.title||rec.folderName||cid;a.title=a.textContent;
       const meta=document.createElement('div');meta.className='chatmeta';
       meta.textContent=t('set.chats.meta',rec.messageCount||0,rec.syncVersion||1,formatSyncTime(rec.syncedAt)||'-');
@@ -860,26 +882,19 @@
       const cats=[...new Set([...baseCats,...(cat?[cat]:[])])].sort((x,y)=>x.localeCompare(y));
       sel.innerHTML=`<option value="">${esc(t('side.syncCatRoot',base))}</option>`+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
       sel.value=cat;
-      sel.addEventListener('change',async()=>{
-        const nextCat=sel.value;
-        const fromSub=rec.subfolder||AutoSync.resolveSubfolder(base,rec.category||'');
-        const toSub=AutoSync.resolveSubfolder(base,nextCat);
-        sel.disabled=true;
-        try{
-          await syncStore.setChatCategory(cid,nextCat);
-          if(fromSub!==toSub){
-            if(resident)toast(t('status.syncMigrating'),true);
-            await send({type:'obsidian:move',base,from:fromSub,to:toSub,folder:rec.folderName,cat:nextCat,cid});
-          }else if(resident){
-            toast(t('status.syncMigrated',toSub));
-          }
-        }catch(e){
-          if(resident)toast(e?.message||String(e));
-        }finally{
-          sel.disabled=false;
-        }
+      sel.addEventListener('change',()=>moveChatToCategory(cid,rec,sel.value,sel));
+      row.addEventListener('dragstart',e=>{
+        if(e.target?.closest?.('select')){e.preventDefault();return;}
+        draggingChat={cid,rec,cat};
+        row.classList.add('dragging');
+        if(e.dataTransfer){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',cid);}
       });
-      row.append(info,sel);
+      row.addEventListener('dragend',()=>{
+        draggingChat=null;
+        row.classList.remove('dragging');
+        clearDropHighlight();
+      });
+      row.append(grip,info,sel);
       return row;
     };
     const renderNode=node=>{
@@ -894,6 +909,31 @@
         else collapsedChatDirs.add(node.path);
         wrap.classList.toggle('collapsed',collapsedChatDirs.has(node.path));
       };
+      head.addEventListener('dragover',e=>{
+        if(!draggingChat||draggingChat.cat===node.path)return;
+        e.preventDefault();
+        if(e.dataTransfer)e.dataTransfer.dropEffect='move';
+        if(!head.classList.contains('drop-over')){
+          clearDropHighlight();
+          head.classList.add('drop-over');
+          if(collapsedChatDirs.has(node.path)){
+            hoverExpandTimer=setTimeout(()=>{
+              collapsedChatDirs.delete(node.path);
+              wrap.classList.remove('collapsed');
+            },450);
+          }
+        }
+      });
+      head.addEventListener('dragleave',e=>{
+        if(!head.contains(e.relatedTarget)){head.classList.remove('drop-over');clearTimeout(hoverExpandTimer);hoverExpandTimer=null;}
+      });
+      head.addEventListener('drop',e=>{
+        if(!draggingChat||draggingChat.cat===node.path)return;
+        e.preventDefault();e.stopPropagation();
+        const item=draggingChat;draggingChat=null;
+        clearDropHighlight();
+        moveChatToCategory(item.cid,item.rec,node.path);
+      });
       const body=document.createElement('div');body.className='chattree-body';
       const sortedChildren=[...node.children.values()].sort((a,b)=>a.name.localeCompare(b.name));
       for(const ch of sortedChildren)body.append(renderNode(ch));
