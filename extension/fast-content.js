@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.2';
+  const version='1.1.3';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -554,6 +554,7 @@
 <div class="menu" id="mSelect" role="menu" hidden><div class="mlab">${esc(t('dock.quick'))}</div>${['all','mine','answers','none'].map(v=>`<button class="mi" role="menuitem" data-preset="${v}">${esc(t(`dock.preset.${v}`))}</button>`).join('')}<div class="msep"></div><button class="mi" role="menuitem" data-open="list">${icon('list')}${esc(t('dock.pickInSidebar'))}</button></div></div>
 <div class="spl pri"><button class="main" id="dExport" title="${esc(t('dock.exportTip'))}"></button><button class="oopen" id="dOpen" hidden title="${esc(t('side.obsOpenTip'))}" aria-label="${esc(t('dock.obsOpenLabel'))}">${icon('ext')}</button><button class="arr" data-menu="mExport" title="${esc(t('dock.kinds'))}" aria-haspopup="menu" aria-expanded="false">${icon('chev')}</button>
 <div class="menu" id="mExport" role="menu" hidden><div class="mlab">${esc(t('dock.kindsHint'))}</div>${kindMenu.map(([v,ic,sub])=>`<button class="mi" role="menuitemradio" data-kind="${v}">${icon(ic)}${esc(t(`kind.${v}.menu`))}<small data-sub="${v}">${sub?esc(t(sub)):''}</small><span class="ok">${icon('check')}</span></button>`).join('')}<div class="msep"></div><button class="mi" role="menuitem" data-open="settings">${icon('gear')}${esc(t('dock.settings'))}</button><div class="mfoot">Chat &amp; Intelligent UI Exporter for ChatGPT v${version}</div></div></div>
+<div class="spl" id="dSyncWrap" hidden><button class="main" id="dSync" title="${esc(t('set.syncNow.value'))}">${icon('refresh')}<span>${esc(t('side.syncNow'))}</span></button></div>
 </div><div class="toast" id="toast" role="status"></div></div>`;
   const closeMenus=()=>{for(const m of dui.querySelectorAll('.menu'))m.hidden=true;for(const b of dui.querySelectorAll('[data-menu]'))b.setAttribute('aria-expanded','false');};
   dui.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
@@ -562,6 +563,7 @@
     if(t.id==='dSelect')return host.hidden?openSidebar():closeSidebar();
     if(t.id==='dExport')return quickExport();
     if(t.id==='dOpen')return openSaved();
+    if(t.id==='dSync')return triggerSyncNow('dock');
     if(t.dataset.kind)return settings.set({exportKind:t.dataset.kind});
     if(t.dataset.preset)return preset(t.dataset.preset);
     if(t.dataset.open)return openSidebar(t.dataset.open);});
@@ -649,11 +651,22 @@
       busy:!!(id&&syncQueue?.isBusy(id)),
     };
   }
+  let lastManualSyncReason='';
+  function triggerSyncNow(reason='manual'){
+    const id=target().id;if(!id||!syncQueue)return;
+    const rec=syncStore?.getRecord(id);
+    if(rec?.status==='need_permission'){send({type:'obsidian:setup'}).catch(()=>{});return;}
+    lastManualSyncReason=reason;
+    if(reason==='dock'&&resident)toast(t('status.syncSyncing'),true);
+    syncQueue.enqueue(id,{force:true,interactive:false,reason});
+  }
   function updateSyncBar(){
-    const bar=$('syncBar');if(!bar||!AutoSync||!resident){if(bar)bar.hidden=true;return;}
+    const bar=$('syncBar'),dWrap=D('dSyncWrap'),dBtn=D('dSync');
+    if(!bar||!AutoSync||!resident){if(bar)bar.hidden=true;if(dWrap)dWrap.hidden=true;return;}
     const info=syncStatusPayload();
-    if(!info.conversationId){bar.hidden=true;return;}
+    if(!info.conversationId){bar.hidden=true;if(dWrap)dWrap.hidden=true;return;}
     bar.hidden=false;
+    if(dWrap){dWrap.hidden=false;if(dBtn)dBtn.disabled=info.busy;}
     const sw=$('syncChat'),nowBtn=$('syncNow'),meta=$('syncMeta');
     const isGlobalAll=info.enabled&&info.scope==='all';
     sw.checked=info.tracked||isGlobalAll;sw.disabled=isGlobalAll;
@@ -738,11 +751,17 @@
           syncStore.enqueuePersistent(id,ev.reason||'grant');
           syncStore.updateRecord(id,{status:'need_permission',error:ev.error||''});
           if(resident&&host.hidden)toast(t('status.syncNeedPerm'));
+          lastManualSyncReason='';
         }else if(ev.status==='retrying'){
           syncStore.updateRecord(id,{status:'retrying',error:ev.error||'',attempt:ev.attempt});
         }else if(ev.status==='error'){
           syncStore.enqueuePersistent(id,'error');
           syncStore.updateRecord(id,{status:'error',error:ev.error||''});
+          if(lastManualSyncReason==='dock'&&resident)toast(t('status.syncError',ev.error||t('err.unknown')));
+          lastManualSyncReason='';
+        }else if(ev.status==='synced'&&lastManualSyncReason==='dock'&&resident){
+          toast(t('panel.syncDone'));
+          lastManualSyncReason='';
         }
         updateSyncBar();
       },
