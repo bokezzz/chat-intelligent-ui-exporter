@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.4';
+  const version='1.1.5';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -20,8 +20,8 @@
   const ui=host.attachShadow({mode:'open'});
   // The sidebar's list is narrow: each kind's short name there (kind.*.side); the settings list has the full one.
   const kindSelect=UI.kindOptions.map(([v])=>`<option value="${v}">${esc(t(`kind.${v}.side`))}</option>`).join('');
-  // The sidebar: pick messages, export them; ⚙ shows the same settings as the toolbar panel.
-  ui.innerHTML=`<style>${UI.css}${UI.pageCss}:host([hidden]){display:none!important}</style><div class="cx sb" id="sb" lang="${I18n.tag}">
+  // The square floating panel: pick messages, export them; ⚙ shows the same settings as the toolbar panel.
+  ui.innerHTML=`<style>${UI.css}${UI.pageCss}:host([hidden]){display:none!important}</style><div class="sb-backdrop" id="sbBackdrop"></div><div class="cx sb" id="sb" lang="${I18n.tag}">
 <div class="sbh"><button class="ib" id="back" title="${esc(t('side.back'))}" hidden>${icon('back')}</button><div class="logo" id="logo">${icon('logo')}</div><div class="ht"><b id="sbTitle">${esc(t('side.title'))}</b><span class="vpill" data-tip="${esc(UI.TIPS.ver)}">v${version}</span></div><button class="ib" id="reload" title="${esc(t('side.reload'))}">${icon('refresh')}</button><button class="ib" id="gear" title="${esc(t('side.settings'))}">${icon('gear')}</button><button class="ib" id="close" title="${esc(t('side.close'))}">${icon('x')}</button></div>
 <div class="view" id="listView"><div class="syncbar" id="syncBar" hidden><div class="synctop"><label class="synctog"><input type="checkbox" class="tg" id="syncChat" role="switch"><span>${esc(t('side.syncChat'))}</span></label><button class="xlink" id="syncNow" type="button">${esc(t('side.syncNow'))}</button></div><div class="syncmeta" id="syncMeta"></div></div><div class="sbf"><button class="fchip" id="all">${esc(t('side.all'))}</button><button class="fchip" id="mine">${esc(t('side.mine'))}</button><button class="fchip" id="answers">${esc(t('side.answers'))}</button><button class="fchip" id="invert">${esc(t('side.invert'))}</button><button class="fchip" id="none">${esc(t('side.none'))}</button></div>
 <div id="list"></div>
@@ -532,7 +532,7 @@
     if(set){const k=$('kind').value;panelSettings.setOpen(k==='html'?'def':k==='pdf'?'name':k==='obsidian'?'obs':'md',true);}}
   function openSidebar(view='list'){host.hidden=false;showView(view);placeDock();fitPill();if(!busyFlag&&route()!==readRoute&&!streaming())load();}
   function closeSidebar(){host.hidden=true;placeDock();}
-  $('close').onclick=closeSidebar;$('gear').onclick=$('gear2').onclick=()=>showView('settings');$('back').onclick=()=>showView('list');
+  $('close').onclick=closeSidebar;$('sbBackdrop').onclick=closeSidebar;$('gear').onclick=$('gear2').onclick=()=>showView('settings');$('back').onclick=()=>showView('list');
   const panelSettings=UI.mountSettings($('setView'),settings,{
     action:name=>{if(name==='raw')rawExport();else if(name==='obsFolder')send({type:'obsidian:setup'}).catch(e=>fail(e.message));else if(name==='reset')settings.reset();else if(name==='shortcut')send({type:'open:shortcuts'}).catch(e=>fail(e.message));},
     // A page script cannot open extension pages; the background opens the explanation in a new tab.
@@ -579,7 +579,7 @@
     const form=onScreen('form[data-chatgpt-composer]')[0]||input?.closest('form')||onScreen('form[data-type="unified-composer"]')[0];
     return form?.querySelector('[data-composer-body]')||form||input;}
   function placeDock(){const v=cfg(),dock=D('dock');dockHost.hidden=!resident||!v.dockShow;dock.classList.toggle('busy',busyFlag);if(dockHost.hidden)return;
-    const W=innerWidth,H=innerHeight,side=host.hidden?0:Math.min(372,W),s=dock.style;let box=composer()?.getBoundingClientRect();if(box&&!box.width)box=null;
+    const W=innerWidth,H=innerHeight,side=0,s=dock.style;let box=composer()?.getBoundingClientRect();if(box&&!box.width)box=null;
     s.left=s.right='';dock.classList.remove('narrow','compact');
     // Where they would cover the input box (its send and voice buttons): smaller, without the format, just above it.
     const above=right=>{dock.classList.add('compact');s.right=`${right}px`;s.bottom=`${Math.max(8,H-box.top+10)}px`;};
@@ -813,7 +813,7 @@
   const watch=setInterval(()=>{if(!host.isConnected){syncWatcher?.destroy();syncQueue?.destroy();return clearInterval(watch);}theme();placeDock();updateSyncBar();if(host.hidden||busyFlag||route()===readRoute||streaming())return;load();},800);
   addEventListener('resize',placeDock);
   addEventListener('unload',()=>{syncWatcher?.destroy();syncQueue?.destroy();});
-  $('stop').onclick=()=>controller?.abort();document.addEventListener('keydown',e=>{if(e.key==='Escape'&&busyFlag&&host.isConnected)controller?.abort();});
+  $('stop').onclick=()=>controller?.abort();document.addEventListener('keydown',e=>{if(e.key==='Escape'&&host.isConnected){if(busyFlag)controller?.abort();else if(!host.hidden&&resident)closeSidebar();}});
   theme();syncSettings();
   if(again.open)openSidebar(again.view);else if(!resident)load();
 })();
