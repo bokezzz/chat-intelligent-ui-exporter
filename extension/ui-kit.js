@@ -318,6 +318,17 @@
 .chatmeta{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chatitem select.fs{max-width:160px;flex:none}
 .chatempty{padding:24px 12px;text-align:center;color:var(--muted);font-size:12.5px}
+.chattree{display:flex;flex-direction:column;gap:4px}
+.chattree-node{display:flex;flex-direction:column;gap:4px}
+.chattree-head{display:flex;align-items:center;gap:6px;width:100%;border:0;background:color-mix(in srgb,var(--text) 4%,transparent);border-radius:7px;padding:6px 9px;font-size:12.5px;font-weight:600;color:var(--text);text-align:left;transition:background .12s}
+.chattree-head:hover{background:color-mix(in srgb,var(--pri) 12%,transparent)}
+.chattree-head .tchev{width:14px;height:14px;color:var(--muted);flex:none;transition:transform .15s}
+.chattree-node.collapsed>.chattree-head .tchev{transform:rotate(-90deg)}
+.chattree-head .tic{width:14px;height:14px;color:var(--pri-deep);flex:none}
+.chattree-head .tname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chattree-head .tcnt{font-size:11px;font-weight:500;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:0 6px;line-height:17px;flex:none}
+.chattree-body{display:flex;flex-direction:column;gap:5px;padding-left:14px;margin-left:9px;border-left:1px solid var(--line)}
+.chattree-node.collapsed>.chattree-body{display:none}
 .syncmeta{font-size:11.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
 .syncmeta.warn{color:color-mix(in srgb,var(--warn) 80%,var(--text))}
 .syncmeta.err{color:color-mix(in srgb,var(--err) 75%,var(--text))}

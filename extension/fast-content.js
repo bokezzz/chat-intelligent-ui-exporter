@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.3.0';
+  const version='1.3.1';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -795,13 +795,14 @@
     }
   }
   let chatSearchQuery='';
+  const collapsedChatDirs=new Set();
   function renderSettingsChats(){
     const acc=$('setMain')?.querySelector('.acc[data-group="chats"] .accb');
     if(!acc||!AutoSync||!syncStore)return;
     let mgr=acc.querySelector('.chatmgr');
     if(!mgr){
       mgr=document.createElement('div');mgr.className='chatmgr';
-      mgr.innerHTML=`<div class="chatbar"><input id="setChatSearch" type="search" placeholder="${esc(t('set.chats.search'))}"><button class="xlink" id="setChatScan" type="button">${esc(t('set.syncCats.scan'))}</button></div><div class="chatlist" id="setChatList"></div>`;
+      mgr.innerHTML=`<div class="chatbar"><input id="setChatSearch" type="search" placeholder="${esc(t('set.chats.search'))}"><button class="xlink" id="setChatScan" type="button">${esc(t('set.syncCats.scan'))}</button></div><div class="chattree" id="setChatList"></div>`;
       acc.append(mgr);
       mgr.querySelector('#setChatSearch').addEventListener('input',e=>{chatSearchQuery=e.target.value.trim().toLowerCase();renderSettingsChats();});
       mgr.querySelector('#setChatScan').onclick=()=>{send({type:'obsidian:scan',base:cfg().autoSyncSubfolder||'ChatGPT-Raw'}).catch(e=>{if(resident)toast(e?.message||String(e));});};
@@ -819,15 +820,35 @@
         return hay.includes(chatSearchQuery);
       })
       .sort((a,b)=>(Date.parse(b.rec.syncedAt||b.rec.updatedAt||'')||0)-(Date.parse(a.rec.syncedAt||a.rec.updatedAt||'')||0));
-    const sig=JSON.stringify([base,baseCats,chatSearchQuery,items.map(x=>[x.cid,x.rec.title||x.rec.folderName,x.cat,x.rec.syncedAt,x.rec.syncVersion,x.rec.messageCount,x.rec.subfolder])]);
+    const sig=JSON.stringify([base,baseCats,chatSearchQuery,[...collapsedChatDirs].sort(),items.map(x=>[x.cid,x.rec.title||x.rec.folderName,x.cat,x.rec.syncedAt,x.rec.syncVersion,x.rec.messageCount,x.rec.subfolder])]);
     if(list.dataset.sig===sig)return;
     list.dataset.sig=sig;
     list.replaceChildren();
-    if(!items.length){
+    if(!items.length&&!baseCats.length){
       const empty=document.createElement('div');empty.className='chatempty';empty.textContent=t('set.chats.empty');
       list.append(empty);return;
     }
-    for(const {cid,rec,cat} of items){
+    // Build directory tree rooted at baseSubfolder.
+    const makeNode=(name,path)=>({name,path,children:new Map(),items:[]});
+    const rootNode=makeNode(t('side.syncCatRoot',base),'');
+    const ensureNode=catPath=>{
+      if(!catPath)return rootNode;
+      let cur=rootNode,accPath='';
+      for(const seg of catPath.split('/').filter(Boolean)){
+        accPath=accPath?`${accPath}/${seg}`:seg;
+        if(!cur.children.has(seg))cur.children.set(seg,makeNode(seg,accPath));
+        cur=cur.children.get(seg);
+      }
+      return cur;
+    };
+    if(!chatSearchQuery)for(const c of baseCats)ensureNode(c);
+    for(const item of items)ensureNode(item.cat).items.push(item);
+    const totalCount=node=>{
+      let n=node.items.length;
+      for(const ch of node.children.values())n+=totalCount(ch);
+      return n;
+    };
+    const buildChatRow=({cid,rec,cat})=>{
       const row=document.createElement('div');row.className='chatitem';
       const info=document.createElement('div');info.className='chatinfo';
       const a=document.createElement('a');a.className='chattitle';a.href=rec.sourceUrl||`https://chatgpt.com/c/${encodeURIComponent(cid)}`;a.target='_blank';a.rel='noopener noreferrer';
@@ -859,8 +880,32 @@
         }
       });
       row.append(info,sel);
-      list.append(row);
+      return row;
+    };
+    const renderNode=node=>{
+      const cnt=totalCount(node);
+      const wrap=document.createElement('div');wrap.className='chattree-node';
+      const isCollapsed=!chatSearchQuery&&collapsedChatDirs.has(node.path);
+      if(isCollapsed)wrap.classList.add('collapsed');
+      const head=document.createElement('button');head.type='button';head.className='chattree-head';
+      head.innerHTML=`${icon('chev','tchev')}${icon('archive','tic')}<span class="tname">${esc(node.name)}</span><span class="tcnt">${cnt}</span>`;
+      head.onclick=()=>{
+        if(collapsedChatDirs.has(node.path))collapsedChatDirs.delete(node.path);
+        else collapsedChatDirs.add(node.path);
+        wrap.classList.toggle('collapsed',collapsedChatDirs.has(node.path));
+      };
+      const body=document.createElement('div');body.className='chattree-body';
+      const sortedChildren=[...node.children.values()].sort((a,b)=>a.name.localeCompare(b.name));
+      for(const ch of sortedChildren)body.append(renderNode(ch));
+      for(const item of node.items)body.append(buildChatRow(item));
+      wrap.append(head,body);
+      return wrap;
+    };
+    if(!items.length&&chatSearchQuery){
+      const empty=document.createElement('div');empty.className='chatempty';empty.textContent=t('set.chats.empty');
+      list.append(empty);return;
     }
+    list.append(renderNode(rootNode));
   }
   async function syncConversation(task){
     const {conversationId,force=false,interactive=false}=task;
