@@ -419,6 +419,7 @@
       if (!folder) {
         dest(t('obs.noFolder'), false);show('pick');
         if (setup) {say(t('obs.setupNone'));hint(t('obs.setupHint'));}
+        else if (isScan || isMkdir) {say(t('obs.firstUse'));hint(t('obs.firstHint'));front();}
         else if (job) {
           if (isSilentSync()) {
             if (port) port.postMessage({type: 'need_permission', reason: 'pick'});
@@ -435,12 +436,14 @@
       log(t('obs.permState', perm));
       if (isMkdir) {
         if (perm === 'granted') {
-          const fullParts = [...safePath(scanBase), ...safePath(mkdirCat)];
-          if (fullParts.length) await getDirByPath(folder, fullParts, true);
-          const scan = await scanSyncRoot(folder, scanBase);
-          await persistScanResult(scan, false);
-          say(t('status.syncScanned', scan.categories.length));
-          setTimeout(() => win.close(), 150);
+          try {
+            const fullParts = [...safePath(scanBase), ...safePath(mkdirCat)];
+            if (fullParts.length) await getDirByPath(folder, fullParts, true);
+            const scan = await scanSyncRoot(folder, scanBase);
+            await persistScanResult(scan, false);
+            say(t('status.syncScanned', scan.categories.length));
+            setTimeout(() => win.close(), 150);
+          } catch (e) {say(t('obs.writeFailed', e?.message || e), true);front();}
         } else {
           show('grant', 'repick');front();
           say(t('obs.needGrant', folder.name));hint(t('obs.grantHint'));
@@ -449,10 +452,12 @@
       }
       if (isScan) {
         if (perm === 'granted') {
-          const scan = await scanSyncRoot(folder, scanBase);
-          await persistScanResult(scan, true);
-          say(t('status.syncScanned', scan.categories.length));
-          setTimeout(() => win.close(), 150);
+          try {
+            const scan = await scanSyncRoot(folder, scanBase);
+            await persistScanResult(scan, true);
+            say(t('status.syncScanned', scan.categories.length));
+            setTimeout(() => win.close(), 150);
+          } catch (e) {say(t('obs.writeFailed', e?.message || e), true);front();}
         } else {
           show('grant', 'repick');front();
           say(t('obs.needGrant', folder.name));hint(t('obs.grantHint'));

@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.2.4';
+  const version='1.2.5';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -777,7 +777,7 @@
       box.innerHTML=`<div class="cathead"><b>${esc(t('set.syncCats'))}</b><span id="setCatCount"></span><button class="xlink" id="setCatScan" type="button">${esc(t('set.syncCats.scan'))}</button></div><div class="catlist" id="setCatList"></div><div class="catadd"><input id="setCatInput" type="text" maxlength="60" placeholder="${esc(t('side.syncCatPlaceholder'))}"><button class="xlink" id="setCatAdd" type="button">${esc(t('side.syncCatAdd'))}</button></div>`;
       const subRow=obsAcc.querySelector('[data-row="autoSyncSubfolder"]');
       if(subRow)subRow.after(box);else obsAcc.append(box);
-      const addFromSettings=async()=>{const inp=box.querySelector('#setCatInput');const val=AutoSync.normalizeCategory(inp.value);if(!val)return;await syncStore.addCategory(val);send({type:'obsidian:mkdir',base:cfg().autoSyncSubfolder||'ChatGPT-Raw',cat:val}).catch(()=>{});inp.value='';renderSettingsCategories();updateSyncBar();};
+      const addFromSettings=async()=>{const inp=box.querySelector('#setCatInput');const val=AutoSync.normalizeCategory(inp.value);if(!val)return;await syncStore.addCategory(val);send({type:'obsidian:mkdir',base:cfg().autoSyncSubfolder||'ChatGPT-Raw',cat:val}).catch(e=>{if(resident)toast(e?.message||String(e));});inp.value='';renderSettingsCategories();updateSyncBar();};
       box.querySelector('#setCatAdd').onclick=addFromSettings;
       box.querySelector('#setCatScan').onclick=()=>{send({type:'obsidian:scan',base:cfg().autoSyncSubfolder||'ChatGPT-Raw'}).catch(e=>fail(e.message));};
       box.querySelector('#setCatInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addFromSettings();}};
@@ -905,7 +905,7 @@
       const inp=$('syncCatInput');if(!inp)return;
       const clean=AutoSync.normalizeCategory(inp.value);if(!clean)return;
       inp.value='';$('syncCatNewRow').hidden=true;
-      send({type:'obsidian:mkdir',base:cfg().autoSyncSubfolder||'ChatGPT-Raw',cat:clean}).catch(()=>{});
+      send({type:'obsidian:mkdir',base:cfg().autoSyncSubfolder||'ChatGPT-Raw',cat:clean}).catch(e=>{if(resident)toast(e?.message||String(e));});
       await applyCategoryChange(clean);
     };
     $('syncCatAdd')?.addEventListener('click',addInlineCategory);
