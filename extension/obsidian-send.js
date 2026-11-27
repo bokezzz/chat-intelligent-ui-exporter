@@ -154,6 +154,87 @@
     } catch {}
     return false;
   }
+  // Recursively scans <vault>/<baseSubfolder> and returns ONLY category subfolder paths
+  // (all nesting levels, never files, never archived conversation folders or assets/ui/files),
+  // plus recovered conversation_id -> folder/category bindings from metadata.json.
+  async function scanSyncRoot(vault, baseSubfolder = 'ChatGPT-Raw') {
+    const baseParts = safePath(baseSubfolder || 'ChatGPT-Raw');
+    const baseStr = baseParts.join('/');
+    const categories = [];
+    const bindings = {};
+    let rootDir;
+    try {rootDir = await getDirByPath(vault, baseParts, false);} catch {return {categories, bindings};}
+    const SKIP = new Set(['assets', 'ui', 'files']);
+    async function walk(dir, relParts) {
+      if (typeof dir?.entries !== 'function') return;
+      const subdirs = [];
+      let hasMeta = false, hasConv = false;
+      for await (const [entryName, handle] of dir.entries()) {
+        if (handle.kind === 'file') {
+          if (entryName === 'metadata.json') hasMeta = true;
+          else if (entryName === 'conversation.md') hasConv = true;
+        } else if (handle.kind === 'directory') {
+          if (!entryName.startsWith('.') && !SKIP.has(entryName)) subdirs.push([entryName, handle]);
+        }
+      }
+      // A directory containing metadata.json or conversation.md is an archived chat folder, not a category.
+      if (relParts.length > 0 && (hasMeta || hasConv)) {
+        if (hasMeta) {
+          const meta = await readJsonFile(dir, 'metadata.json');
+          if (meta?.conversation_id) {
+            const catParts = relParts.slice(0, -1);
+            const cat = catParts.join('/');
+            const folderName = relParts[relParts.length - 1];
+            const subfolder = cat ? `${baseStr}/${cat}` : baseStr;
+            bindings[meta.conversation_id] = {
+              conversationId: meta.conversation_id,
+              folderName,
+              category: cat,
+              subfolder,
+              path: [...baseParts, ...relParts, 'conversation.md'].join('/'),
+              syncedAt: meta.synced_at || '',
+              updatedAt: meta.updated_at || '',
+              syncVersion: Number(meta.sync_version) || 1,
+              contentHash: meta.content_hash || '',
+              messageCount: Number(meta.message_count) || 0,
+              status: 'synced',
+              error: '',
+            };
+          }
+        }
+        return;
+      }
+      if (relParts.length > 0) categories.push(relParts.join('/'));
+      for (const [subName, subHandle] of subdirs) {
+        await walk(subHandle, [...relParts, subName]);
+      }
+    }
+    await walk(rootDir, []);
+    categories.sort((a, b) => a.localeCompare(b));
+    return {categories, bindings};
+  }
+  async function persistScanResult(scan, replaceCategories = false) {
+    try {
+      const area = chrome?.storage?.local;
+      if (!area) return;
+      const cur = await area.get(['chatExportSyncCategories', 'chatExportSyncChatCategory', 'chatExportSyncState']) || {};
+      const nextCats = replaceCategories
+        ? [...scan.categories]
+        : [...new Set([...(Array.isArray(cur.chatExportSyncCategories) ? cur.chatExportSyncCategories : []), ...scan.categories])].sort((a, b) => a.localeCompare(b));
+      const nextChatCat = {...(cur.chatExportSyncChatCategory || {})};
+      const nextState = {...(cur.chatExportSyncState || {})};
+      for (const [cid, b] of Object.entries(scan.bindings || {})) {
+        if (b.category) nextChatCat[cid] = b.category;
+        else delete nextChatCat[cid];
+        nextState[cid] = {...(nextState[cid] || {}), ...b};
+      }
+      await area.set({
+        chatExportSyncCategories: nextCats,
+        chatExportSyncChatCategory: nextChatCat,
+        chatExportSyncState: nextState,
+      });
+    } catch {}
+  }
   // Moves an existing synced conversation folder from oldSubfolder/folderName to newSubfolder/folderName,
   // updates metadata.json inside the moved folder, and removes the old folder.
   async function moveSyncFolder(vault, {fromSubfolder = '', toSubfolder = '', folderName = '', category = ''} = {}) {
@@ -314,9 +395,10 @@
     try {$('version').textContent = `v${chrome.runtime.getManifest().version}`;} catch {}
     const params = new URLSearchParams(win.location.search), tabId = Number(params.get('tab')), jobId = params.get('job');
     const isSyncParam = params.get('sync') === '1';
+    const isScan = params.get('scan') === '1', scanBase = params.get('base') || 'ChatGPT-Raw';
     // ?setup: opened from the panel's 更改笔记文件夹 to see or change the folder; nothing is sent.
     const setup = params.has('setup');let changed = false;
-    if (!setup && (!tabId || !jobId)) {say(t('obs.alone'), true);return;}
+    if (!setup && !isScan && (!tabId || !jobId)) {say(t('obs.alone'), true);return;}
 
     let job = null, folder = null, port = null, done = false;
     const isSilentSync = () => !!(job?.meta?.mode === 'sync' && !job?.meta?.interactive) || (isSyncParam && !job);
@@ -350,8 +432,24 @@
       const perm = await folder.queryPermission({mode: 'readwrite'});
       dest(`${folder.name}${notePath()}`);remember(folder.name);
       log(t('obs.permState', perm));
+      if (isScan) {
+        if (perm === 'granted') {
+          const scan = await scanSyncRoot(folder, scanBase);
+          await persistScanResult(scan, true);
+          say(t('status.syncScanned', scan.categories.length));
+          setTimeout(() => win.close(), 150);
+        } else {
+          show('grant', 'repick');front();
+          say(t('obs.needGrant', folder.name));hint(t('obs.grantHint'));
+        }
+        return;
+      }
       if (setup) {
-        if (perm === 'granted') {show('repick');hint('');say(changed ? t('obs.setupDone', folder.name) : t('obs.setupNow', folder.name));notifyGranted();}
+        if (perm === 'granted') {
+          const base = (await chrome?.storage?.local?.get('autoSyncSubfolder').catch(() => ({})))?.autoSyncSubfolder || 'ChatGPT-Raw';
+          scanSyncRoot(folder, base).then(s => persistScanResult(s, false)).catch(() => {});
+          show('repick');hint('');say(changed ? t('obs.setupDone', folder.name) : t('obs.setupNow', folder.name));notifyGranted();
+        }
         else {show('grant', 'repick');say(t('obs.needGrant', folder.name));hint(t('obs.grantHint'));}
         return;
       }
@@ -385,6 +483,10 @@
         $('open').onclick = () => {win.location.href = url;};show('open', 'repick');
         // The ChatGPT tab opens the note; this tab closes unless there is something to read here or
         // nobody is left to open it. Silent sync never opens Obsidian automatically.
+        if (isSync) {
+          const base = job.meta?.baseSubfolder || (job.meta?.subfolder || 'ChatGPT-Raw').split('/')[0] || 'ChatGPT-Raw';
+          await scanSyncRoot(folder, base).then(s => persistScanResult(s, false)).catch(() => {});
+        }
         if (port) {
           port.postMessage({type: 'written', path: `${folder.name}/${result.notePath}`, url, silent: isSync, skipped: result.skipped || null, folderName: result.name, metadata: result.metadata || null});
           if (!warn || isSync) setTimeout(() => win.close(), isSync ? 200 : 300);
@@ -407,7 +509,7 @@
     $('pick').onclick = pick;$('repick').onclick = pick;$('write').onclick = write;
     $('grant').onclick = async () => {const perm = await folder.requestPermission({mode: 'readwrite'});log(`requestPermission → ${perm}`);if (perm === 'granted') {notifyGranted();if (job) write(); else refresh();} else refresh();};
 
-    if (setup) {$('convLab').hidden = true;$('conv').textContent = t('obs.folderLabel');refresh();return;}
+    if (setup || isScan) {$('convLab').hidden = true;$('conv').textContent = t('obs.folderLabel');refresh();return;}
     const take = receiver();let received = 0;
     port = chrome.tabs.connect(tabId, {name: `obsidian:${jobId}`, frameId: 0});
     port.onMessage.addListener(message => {
@@ -426,7 +528,7 @@
     refresh();
   }
 
-  const api = {CHUNK, safeSegment, safePath, uniqueName, toBase64, fromBase64, obsidianUrl, sendJob, receiver, writeJob, syncFolderName, moveSyncFolder, writeSyncJob, boot};
+  const api = {CHUNK, safeSegment, safePath, uniqueName, toBase64, fromBase64, obsidianUrl, sendJob, receiver, writeJob, syncFolderName, scanSyncRoot, moveSyncFolder, writeSyncJob, boot};
   root.ChatExportObsidian = api;
   if (typeof module !== 'undefined') module.exports = api;
   // The page shows the language picked in the settings (read first), or the browser's.

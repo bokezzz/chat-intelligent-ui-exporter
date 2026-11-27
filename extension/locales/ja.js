@@ -588,4 +588,6 @@
   "set.syncCats": "カテゴリ・サブフォルダ管理",
   "set.syncCats.empty": "まだありません（ここか会話画面で作成可能）",
   "set.syncCats.count": "{0} 個のサブフォルダ",
+  "set.syncCats.scan": "フォルダをスキャン",
+  "status.syncScanned": "{0} 個のサブフォルダを検出しました",
 };

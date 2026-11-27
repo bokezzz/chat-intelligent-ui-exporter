@@ -588,4 +588,6 @@
   "set.syncCats": "Kategorie-Unterordner",
   "set.syncCats.empty": "Noch keine — hier oder im Chat anlegen",
   "set.syncCats.count": "{0} Unterordner",
+  "set.syncCats.scan": "Ordner scannen",
+  "status.syncScanned": "{0} Unterordner gefunden",
 };

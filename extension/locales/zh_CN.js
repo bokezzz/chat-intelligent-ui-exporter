@@ -588,4 +588,6 @@
   "set.syncCats": "分类子目录管理",
   "set.syncCats.empty": "暂无子目录，可在此或对话页新建",
   "set.syncCats.count": "{0} 个子目录",
+  "set.syncCats.scan": "扫描目录",
+  "status.syncScanned": "已扫描到 {0} 个子目录",
 };

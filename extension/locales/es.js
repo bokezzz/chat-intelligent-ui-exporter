@@ -588,4 +588,6 @@
   "set.syncCats": "Subcarpetas de categoría",
   "set.syncCats.empty": "Ninguna aún — créala aquí o en un chat",
   "set.syncCats.count": "{0} subcarpetas",
+  "set.syncCats.scan": "Escanear carpetas",
+  "status.syncScanned": "{0} subcarpetas encontradas",
 };

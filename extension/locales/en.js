@@ -602,4 +602,6 @@
   "set.syncCats": "Category subfolders",
   "set.syncCats.empty": "None yet — create here or inside any chat",
   "set.syncCats.count": "{0} subfolders",
+  "set.syncCats.scan": "Scan folders",
+  "status.syncScanned": "Found {0} subfolders",
 };

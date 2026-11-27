@@ -390,3 +390,34 @@ test('writeSyncJob migrates an existing synced chat folder to a new category sub
   await store.removeCategory('408/OS');
   assert.deepEqual(store.getCategories(), []);
 });
+
+test('scanSyncRoot lists all nested category directories under ChatGPT-Raw only, hides files and chat folders, and recovers bindings', async () => {
+  const vault = memFolder('MyVault');
+  // Unrelated vault folders outside ChatGPT-Raw should never appear.
+  await vault.getDirectoryHandle('Journal', {create: true});
+  const raw = await vault.getDirectoryHandle('ChatGPT-Raw', {create: true});
+  // Loose file in ChatGPT-Raw must not appear.
+  const loose = await (await raw.getFileHandle('README.md', {create: true})).createWritable();
+  await loose.write(new Blob(['note']));
+  // Nested category directories: 408, 408/OS, 408/OS/Memory, Embedded.
+  const d408 = await raw.getDirectoryHandle('408', {create: true});
+  const dOs = await d408.getDirectoryHandle('OS', {create: true});
+  await dOs.getDirectoryHandle('Memory', {create: true});
+  await raw.getDirectoryHandle('Embedded', {create: true});
+  // Archived conversation inside 408/OS must not appear as a category, but its binding is recovered.
+  await ob.writeSyncJob(vault, 'ChatGPT-Raw/408/OS', {
+    meta: {
+      mode: 'sync', conversationId: 'conv-scan-1', title: 'Virtual Memory', rawTitle: 'Virtual Memory',
+      category: '408/OS', source: 'https://chatgpt.com/c/conv-scan-1', version: '1.2.1',
+      updatedAt: '2026-11-27T11:00:00.000Z', contentHash: 'abc123', messageCount: 2, messageIds: ['u1', 'a1'],
+    },
+    md: '# Virtual Memory\n',
+    files: [{path: 'assets/a.png', blob: new Blob(['png'])}],
+  });
+
+  const scan = await ob.scanSyncRoot(vault, 'ChatGPT-Raw');
+  assert.deepEqual(scan.categories, ['408', '408/OS', '408/OS/Memory', 'Embedded']);
+  assert.ok(scan.bindings['conv-scan-1']);
+  assert.equal(scan.bindings['conv-scan-1'].category, '408/OS');
+  assert.equal(scan.bindings['conv-scan-1'].subfolder, 'ChatGPT-Raw/408/OS');
+});

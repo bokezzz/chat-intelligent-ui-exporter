@@ -588,4 +588,6 @@
   "set.syncCats": "Sous-dossiers de catégorie",
   "set.syncCats.empty": "Aucun — créez-en ici ou dans un chat",
   "set.syncCats.count": "{0} sous-dossiers",
+  "set.syncCats.scan": "Analyser les dossiers",
+  "status.syncScanned": "{0} sous-dossiers trouvés",
 };

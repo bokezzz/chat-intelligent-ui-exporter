@@ -588,4 +588,6 @@
   "set.syncCats": "카테고리 하위 폴더 관리",
   "set.syncCats.empty": "아직 없음 — 여기나 대화 창에서 추가하세요",
   "set.syncCats.count": "{0}개 하위 폴더",
+  "set.syncCats.scan": "폴더 스캔",
+  "status.syncScanned": "{0}개 하위 폴더를 찾았습니다",
 };

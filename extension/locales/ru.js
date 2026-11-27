@@ -588,4 +588,6 @@
   "set.syncCats": "Подпапки категорий",
   "set.syncCats.empty": "Пока нет — создайте здесь или в чате",
   "set.syncCats.count": "Подпапок: {0}",
+  "set.syncCats.scan": "Сканировать папки",
+  "status.syncScanned": "Найдено подпапок: {0}",
 };

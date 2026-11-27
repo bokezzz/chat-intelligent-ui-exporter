@@ -588,4 +588,6 @@
   "set.syncCats": "分類子目錄管理",
   "set.syncCats.empty": "尚無子目錄，可在此或對話頁新增",
   "set.syncCats.count": "{0} 個子目錄",
+  "set.syncCats.scan": "掃描目錄",
+  "status.syncScanned": "已掃描到 {0} 個子目錄",
 };

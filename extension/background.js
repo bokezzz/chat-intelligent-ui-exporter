@@ -66,6 +66,10 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     // 笔记文件夹 → 更改…: the same page, in front, without a job.
     if (message.type === 'obsidian:setup')
       return {id: (await chrome.tabs.create({url: chrome.runtime.getURL('obsidian.html?setup=1'), index: sender.tab.index + 1, openerTabId: sender.tab.id})).id};
+    if (message.type === 'obsidian:scan') {
+      const base = encodeURIComponent(String(message.base || 'ChatGPT-Raw').slice(0, 60));
+      return {id: (await chrome.tabs.create({url: chrome.runtime.getURL(`obsidian.html?scan=1&base=${base}`), index: sender.tab.index + 1, openerTabId: sender.tab.id, active: false})).id};
+    }
     throw Error(t('bg.unknown'));
   })().then(result => reply(result), error => reply({error: error.message}));
   return true;

@@ -588,4 +588,6 @@
   "set.syncCats": "Subpastas de categoria",
   "set.syncCats.empty": "Nenhuma ainda — crie aqui ou em um chat",
   "set.syncCats.count": "{0} subpastas",
+  "set.syncCats.scan": "Escanear pastas",
+  "status.syncScanned": "{0} subpastas encontradas",
 };
