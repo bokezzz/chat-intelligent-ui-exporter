@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.1.9';
+  const version='1.1.10';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -559,7 +559,7 @@
       b.onclick=()=>selectSetTab(key);nav.append(b);
     }
     selectSetTab('obs');})();
-  UI.attachTips(ui,$('sb'));
+  UI.attachTips(ui,ui);
   // Status lines that end an export with problems are marked; with the sidebar closed they show above the buttons.
   let lastError='',lastWarn='';function fail(message){lastError=message;$('status').textContent=message;}
   new MutationObserver(()=>{const text=$('status').textContent;$('stx').className='stx'+(text&&text===lastError?' err':text&&(text===lastWarn||text.includes('⚠'))?' warn':'');if(host.hidden&&resident&&text)toast(text,busyFlag);}).observe($('status'),{childList:true,characterData:true,subtree:true});

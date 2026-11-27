@@ -168,7 +168,7 @@
 
   // ⓘ: a box floating over the page on hover or keyboard focus; nothing below it moves.
   function attachTips(scope,parent){
-    const doc=parent.ownerDocument,box=doc.createElement('div');box.className='tipbox';box.setAttribute('role','tooltip');parent.append(box);
+    const doc=parent.ownerDocument||parent.host?.ownerDocument||root.document,box=doc.createElement('div');box.className='tipbox';box.setAttribute('role','tooltip');parent.append(box);
     const show=el=>{box.textContent=el.dataset.tip;box.classList.add('show');const r=el.getBoundingClientRect(),w=doc.defaultView,tw=box.offsetWidth,th=box.offsetHeight;
       const x=Math.min(Math.max(8,r.left+r.width/2-tw/2),w.innerWidth-tw-8);let y=r.top-th-8;if(y<8)y=r.bottom+8;box.style.left=x+'px';box.style.top=y+'px';};
     const hide=()=>box.classList.remove('show');
@@ -271,7 +271,7 @@
   const pageCss=`
 :host{all:initial}
 .sb-backdrop{position:fixed;inset:0;z-index:2147483645;background:rgba(15,17,20,.32);backdrop-filter:blur(2px)}
-.sb{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(680px,calc(100vw - 48px));height:min(560px,calc(100vh - 48px));z-index:2147483646;background:var(--bg);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.22),0 4px 16px rgba(0,0,0,.08);display:flex;flex-direction:column;overflow:hidden}
+.sb{position:fixed;inset:0;margin:auto;width:min(680px,calc(100vw - 48px));height:min(560px,calc(100vh - 48px));z-index:2147483646;background:var(--bg);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.22),0 4px 16px rgba(0,0,0,.08);display:flex;flex-direction:column;overflow:hidden}
 .sbh{display:flex;align-items:center;gap:8px;padding:12px 12px 12px 16px;background:var(--surface);border-bottom:1px solid var(--line);flex:none}
 .sbh .ib{border-radius:8px}
 .sbh .ht{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
