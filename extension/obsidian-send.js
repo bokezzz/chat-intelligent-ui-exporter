@@ -105,6 +105,94 @@
     return {name, notePath: [...safePath(folder), name, `${name}.md`].join('/'), files: job.files.length, bytes, renamed};
   }
 
+  // Stable folder name for auto-sync: binds a conversation_id to one directory so repeated syncs
+  // always overwrite in place instead of creating "title 2", "title 3", ...
+  function syncFolderName(meta = {}) {
+    if (meta.folderName) return safeSegment(meta.folderName, 'ChatGPT');
+    const rawId = String(meta.conversationId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    const suffix = rawId ? rawId.slice(0, 8) : '';
+    const title = safeSegment(meta.title, 'ChatGPT');
+    if (!suffix) return title;
+    const base = Array.from(title).slice(0, 78).join('').replace(/[ .]+$/, '') || 'ChatGPT';
+    return safeSegment(`${base} (${suffix})`, suffix);
+  }
+  async function readJsonFile(dir, name) {
+    try {
+      const handle = await dir.getFileHandle(name);
+      const file = await handle.getFile();
+      return JSON.parse(await file.text());
+    } catch {return null;}
+  }
+  // Incremental auto-sync write: updates <folder>/<syncFolder>/conversation.md + metadata.json +
+  // assets/, ui/, files/ in place. Checks existing metadata.json to skip unchanged or stale writes.
+  async function writeSyncJob(vault, folder, job, log = () => {}) {
+    const meta = job.meta || {};
+    const subParts = safePath(folder || meta.subfolder || '');
+    let dir = vault;
+    for (const part of subParts) dir = await dir.getDirectoryHandle(part, {create: true});
+    const candidates = [syncFolderName(meta), plainSegment(syncFolderName(meta), safeSegment(meta.conversationId, 'ChatGPT'))];
+    let name, home;
+    for (let i = 0; i < candidates.length; i++) {
+      name = candidates[i];
+      try {home = await dir.getDirectoryHandle(name, {create: true});break;}
+      catch (e) {if (e?.name !== 'TypeError' || i === candidates.length - 1) throw e;log(t('obs.badName', name));}
+    }
+    const existing = await readJsonFile(home, 'metadata.json');
+    const force = !!meta.force;
+    if (!force && existing && meta.conversationId && existing.conversation_id === meta.conversationId) {
+      const oldUpdated = existing.updated_at ? Date.parse(existing.updated_at) : 0;
+      const newUpdated = meta.updatedAt ? Date.parse(meta.updatedAt) : 0;
+      if (oldUpdated && newUpdated && oldUpdated > newUpdated) {
+        return {name, notePath: [...subParts, name, 'conversation.md'].join('/'), files: 0, bytes: 0, renamed: [], skipped: 'stale', metadata: existing};
+      }
+      if (existing.content_hash && meta.contentHash && existing.content_hash === meta.contentHash) {
+        return {name, notePath: [...subParts, name, 'conversation.md'].join('/'), files: 0, bytes: 0, renamed: [], skipped: 'unchanged', metadata: existing};
+      }
+    }
+    const write = async (parent, file, blob) => {
+      const writable = await (await parent.getFileHandle(file, {create: true})).createWritable();
+      await writable.write(blob);
+      await writable.close();
+    };
+    const syncedAt = meta.exportedAt || new Date().toISOString();
+    const syncVersion = (Number(existing?.sync_version) || 0) + 1;
+    const assetsCount = job.files.filter(f => safePath(f.path)[0] === 'assets').length;
+    const uiCount = job.files.filter(f => safePath(f.path)[0] === 'ui').length;
+    const filesCount = job.files.filter(f => safePath(f.path)[0] === 'files').length;
+    const metadata = {
+      schema_version: 1,
+      conversation_id: meta.conversationId || '',
+      title: meta.rawTitle || meta.title || 'ChatGPT',
+      source_url: meta.source || '',
+      created_at: meta.createdAt || existing?.created_at || syncedAt,
+      updated_at: meta.updatedAt || syncedAt,
+      synced_at: syncedAt,
+      sync_version: syncVersion,
+      content_hash: meta.contentHash || '',
+      message_count: Number(meta.messageCount) || 0,
+      message_ids: Array.isArray(meta.messageIds) ? meta.messageIds : [],
+      assets_count: assetsCount,
+      ui_count: uiCount,
+      files_count: filesCount,
+      exporter_version: meta.version || '',
+      folder_name: name,
+    };
+    await write(home, 'conversation.md', new Blob([job.md], {type: 'text/markdown'}));
+    let bytes = job.md.length;const renamed = [];
+    for (const f of job.files) {
+      const parts = safePath(f.path);
+      if (!parts.length) continue;
+      if (parts.join('/') !== f.path) renamed.push(`${f.path} → ${parts.join('/')}`);
+      let parent = home;
+      for (const part of parts.slice(0, -1)) parent = await parent.getDirectoryHandle(part, {create: true});
+      await write(parent, parts.at(-1), f.blob);bytes += f.blob.size;log(t('obs.wrote', parts.join('/'), (f.blob.size / 1024).toFixed(0)));
+    }
+    const metaJson = JSON.stringify(metadata, null, 2);
+    await write(home, 'metadata.json', new Blob([metaJson], {type: 'application/json'}));
+    bytes += metaJson.length;
+    return {name, notePath: [...subParts, name, 'conversation.md'].join('/'), files: job.files.length, bytes, renamed, skipped: null, metadata};
+  }
+
   // The chosen folder's handle lives in this extension's IndexedDB; handles cannot go into
   // chrome.storage. (The key is still 'vault' so a folder picked in 0.11.8–0.11.10 is kept.)
   function db(mode, use) {
@@ -147,29 +235,55 @@
     const front = async () => {try {const tab = await chrome.tabs.getCurrent();if (tab) await chrome.tabs.update(tab.id, {active: true});} catch {}};
     try {$('version').textContent = `v${chrome.runtime.getManifest().version}`;} catch {}
     const params = new URLSearchParams(win.location.search), tabId = Number(params.get('tab')), jobId = params.get('job');
+    const isSyncParam = params.get('sync') === '1';
     // ?setup: opened from the panel's 更改笔记文件夹 to see or change the folder; nothing is sent.
     const setup = params.has('setup');let changed = false;
     if (!setup && (!tabId || !jobId)) {say(t('obs.alone'), true);return;}
 
     let job = null, folder = null, port = null, done = false;
+    const isSilentSync = () => !!(job?.meta?.mode === 'sync' && !job?.meta?.interactive) || (isSyncParam && !job);
+    const notifyGranted = () => {try {chrome.runtime?.sendMessage?.({type: 'sync:permissionGranted'}).catch?.(() => {});} catch {}};
     // Before writing: the note's path as it will be (a second copy gets 「 2」); after: as written.
     // A folder alone ends in 「 /」 so it too reads as a path.
-    const notePath = () => {const name = safeSegment(job?.meta?.title, 'ChatGPT');return job ? ` / ${name} / ${name}.md` : ' /';};
+    const notePath = () => {
+      if (!job) return ' /';
+      if (job.meta?.mode === 'sync') {
+        const sub = safePath(job.meta.subfolder || ''), name = syncFolderName(job.meta);
+        return ` / ${[...sub, name, 'conversation.md'].join(' / ')}`;
+      }
+      const name = safeSegment(job?.meta?.title, 'ChatGPT');return ` / ${name} / ${name}.md`;
+    };
     async function refresh() {
       folder = await loadVault().catch(() => null);
       if (!folder) {
         dest(t('obs.noFolder'), false);show('pick');
         if (setup) {say(t('obs.setupNone'));hint(t('obs.setupHint'));}
-        else if (job) {say(t('obs.firstUse'));hint(t('obs.firstHint'));front();}
+        else if (job) {
+          if (isSilentSync()) {
+            if (port) port.postMessage({type: 'need_permission', reason: 'pick'});
+            setTimeout(() => win.close(), 200);
+            return;
+          }
+          say(t('obs.firstUse'));hint(t('obs.firstHint'));front();
+        }
         else say(t('obs.receiving'));
         return;
       }
       const perm = await folder.queryPermission({mode: 'readwrite'});
       dest(`${folder.name}${notePath()}`);remember(folder.name);
       log(t('obs.permState', perm));
-      if (setup) {show('repick');hint('');say(changed ? t('obs.setupDone', folder.name) : t('obs.setupNow', folder.name));return;}
+      if (setup) {
+        if (perm === 'granted') {show('repick');hint('');say(changed ? t('obs.setupDone', folder.name) : t('obs.setupNow', folder.name));notifyGranted();}
+        else {show('grant', 'repick');say(t('obs.needGrant', folder.name));hint(t('obs.grantHint'));}
+        return;
+      }
       if (!job) return;
       if (perm === 'granted') return write();
+      if (isSilentSync()) {
+        if (port) port.postMessage({type: 'need_permission', reason: 'grant', folderName: folder.name});
+        setTimeout(() => win.close(), 200);
+        return;
+      }
       // Chrome forgets the permission when this kind of tab closes, unless the user picks
       // 每次访问时都允许 in its prompt; say so, or it asks again for every chat.
       show('grant', 'repick');front();
@@ -180,19 +294,31 @@
       if (done) return;
       show();hint('');say(t('obs.writing'));
       try {
-        const started2 = performance.now(), result = await writeJob(folder, '', job, log);done = true;
+        const started2 = performance.now();
+        const isSync = job?.meta?.mode === 'sync';
+        const result = isSync
+          ? await writeSyncJob(folder, job.meta.subfolder || '', job, log)
+          : await writeJob(folder, '', job, log);
+        done = true;
         const url = (await isVault(folder)) ? obsidianUrl(result.name, folder.name, result.notePath) : obsidianUrl(result.name);
         const warn = result.renamed.length > 0;dest(`${folder.name} / ${result.notePath.split('/').join(' / ')}`, true, url);
         say(t('obs.saved', result.files + 1, (result.bytes / 1048576).toFixed(1), ((performance.now() - started2) / 1000).toFixed(2)) + (warn ? `\n${t('obs.renamed', result.renamed.length)}\n${result.renamed.join('\n')}` : ''), warn);
         log(t('obs.done', url));
         $('open').onclick = () => {win.location.href = url;};show('open', 'repick');
         // The ChatGPT tab opens the note; this tab closes unless there is something to read here or
-        // nobody is left to open it.
+        // nobody is left to open it. Silent sync never opens Obsidian automatically.
         if (port) {
-          port.postMessage({type: 'written', path: `${folder.name}/${result.notePath}`, url});
-          if (!warn) setTimeout(() => win.close(), 300);
-        } else win.location.href = url;
-      } catch (e) {say(t('obs.writeFailed', e?.message || e), true);log(String(e?.stack || e));show('write', 'repick');front();}
+          port.postMessage({type: 'written', path: `${folder.name}/${result.notePath}`, url, silent: isSync, skipped: result.skipped || null, folderName: result.name, metadata: result.metadata || null});
+          if (!warn || isSync) setTimeout(() => win.close(), isSync ? 200 : 300);
+        } else if (!isSync) win.location.href = url;
+      } catch (e) {
+        if (port && isSilentSync()) {
+          port.postMessage({type: 'error', message: e?.message || String(e)});
+          setTimeout(() => win.close(), 200);
+          return;
+        }
+        say(t('obs.writeFailed', e?.message || e), true);log(String(e?.stack || e));show('write', 'repick');front();
+      }
     }
     async function pick() {
       try {
@@ -201,7 +327,7 @@
       } catch (e) {if (e?.name !== 'AbortError') say(t('obs.pickFailed', e?.message || e), true);}
     }
     $('pick').onclick = pick;$('repick').onclick = pick;$('write').onclick = write;
-    $('grant').onclick = async () => {const perm = await folder.requestPermission({mode: 'readwrite'});log(`requestPermission → ${perm}`);perm === 'granted' ? write() : refresh();};
+    $('grant').onclick = async () => {const perm = await folder.requestPermission({mode: 'readwrite'});log(`requestPermission → ${perm}`);if (perm === 'granted') {notifyGranted();if (job) write(); else refresh();} else refresh();};
 
     if (setup) {$('convLab').hidden = true;$('conv').textContent = t('obs.folderLabel');refresh();return;}
     const take = receiver();let received = 0;
@@ -213,13 +339,16 @@
         const finished = take(message);
         if (!finished) {if (message.type === 'chunk') say(t('obs.receivingMb', (received / 1048576).toFixed(1)));return;}
         job = finished;log(t('obs.received', (received / 1048576).toFixed(1)));port.postMessage({type: 'received'});refresh();
-      } catch (e) {say(t('obs.receiveFailed', e?.message || e), true);front();}
+      } catch (e) {
+        if (port && isSilentSync()) {port.postMessage({type: 'error', message: e?.message || String(e)});setTimeout(() => win.close(), 200);return;}
+        say(t('obs.receiveFailed', e?.message || e), true);front();
+      }
     });
-    port.onDisconnect.addListener(() => {port = null;if (!job) {say(t('obs.disconnected'), true);front();}});
+    port.onDisconnect.addListener(() => {port = null;if (!job) {if (isSyncParam) {setTimeout(() => win.close(), 150);return;} say(t('obs.disconnected'), true);front();}});
     refresh();
   }
 
-  const api = {CHUNK, safeSegment, safePath, uniqueName, toBase64, fromBase64, obsidianUrl, sendJob, receiver, writeJob, boot};
+  const api = {CHUNK, safeSegment, safePath, uniqueName, toBase64, fromBase64, obsidianUrl, sendJob, receiver, writeJob, syncFolderName, writeSyncJob, boot};
   root.ChatExportObsidian = api;
   if (typeof module !== 'undefined') module.exports = api;
   // The page shows the language picked in the settings (read first), or the browser's.

@@ -5,7 +5,7 @@
 // localStorage holds them, the five older options under the keys they always had.
 (root => {
   const I18n=root.ChatExportI18n||(typeof module!=='undefined'?require('./i18n.js'):null),t=I18n.t;
-  const version='1.0.8';
+  const version='1.1.0';
   const defaults={
     saveAs:false,
     exportKind:'zip', profile:'generic', htmlForm:'single', htmlMap:true, autoClose:false,
@@ -16,9 +16,11 @@
     // The name of the folder 保存到 Obsidian writes into, for display; the folder itself (its handle)
     // is kept by obsidian.html, which also writes this name.
     obsidianFolder:'',
+    autoSyncEnabled:false, autoSyncScope:'all', autoSyncSubfolder:'ChatGPT-Raw',
+    autoSyncImages:true, autoSyncAttachments:true, autoSyncUi:true,
     language:'auto',
   };
-  const choices={exportKind:['md','zip','html','pdf','obsidian'],profile:['generic','obsidian'],htmlForm:['folder','single'],fileName:['title','title-date','date-title','prefix'],proseHtml:['escape','keep'],dockPos:['input','corner'],language:['auto',...I18n.LOCALES]};
+  const choices={exportKind:['md','zip','html','pdf','obsidian'],profile:['generic','obsidian'],htmlForm:['folder','single'],fileName:['title','title-date','date-title','prefix'],proseHtml:['escape','keep'],dockPos:['input','corner'],autoSyncScope:['all','selected'],language:['auto',...I18n.LOCALES]};
   // The profile only sets the defaults of these options; each can still be changed by hand.
   // Picture cards as HTML stay off in both until that output is checked before it is written.
   const profiles={generic:{htmlCards:false,proseHtml:'escape'},obsidian:{htmlCards:false,proseHtml:'keep'}};

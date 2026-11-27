@@ -22,7 +22,7 @@
   const form=`https://docs.google.com/forms/d/e/1FAIpQLSemj8AaDckqB2NJ_tsb3VW2jG1AxM-NIrmKJMom8IXtjUYgaQ/viewform?usp=pp_url&entry.109250588=${encodeURIComponent(env)}`;
   const foot=`<div class="xft">${popup?`<a id="openTab" href="#">${icon('ext')}${esc(t('panel.openTab'))}</a>`:''}<span class="grow"></span><a href="${esc(form)}" target="_blank" rel="noopener">${esc(t('panel.feedback'))}</a><a href="${repo}" target="_blank" rel="noopener">GitHub</a></div>`;
   body.innerHTML=popup
-    ?`<div class="xhd"><div class="logo">${icon('logo')}</div><b>Chat &amp; Intelligent UI Exporter for ChatGPT</b>${ver}</div>${warn}<div class="xhero" id="hero"></div><div class="xmsg" id="msg" role="status" hidden></div><div id="settings"></div>${foot}`
+    ?`<div class="xhd"><div class="logo">${icon('logo')}</div><b>Chat &amp; Intelligent UI Exporter for ChatGPT</b>${ver}</div>${warn}<div class="xhero" id="hero"></div><div class="xsync" id="syncBox" hidden></div><div class="xmsg" id="msg" role="status" hidden></div><div id="settings"></div>${foot}`
     :`<main class="opt"><div class="opth"><div class="logo">${icon('logo')}</div><h1>${esc(t('panel.settingsTitle'))}</h1>${ver}</div>${warn}<div class="xmsg" id="msg" role="status" hidden></div><div class="card" id="settings"></div>${foot}</main>`;
   const $=id=>document.getElementById(id);
   const say=(text,error=false)=>{const m=$('msg');m.hidden=!text;m.textContent=text||'';m.classList.toggle('err',error);};
@@ -32,7 +32,8 @@
   UI.attachTips(document,body);
 
   // The tab the panel was opened over, and its content script (added now if the tab predates the extension).
-  let tab=null,summary=null;
+  let tab=null,summary=null,syncInfo=null;
+  function drawSync(){}
   if(popup)[tab]=await chrome.tabs.query({active:true,currentWindow:true});
   const chatTab=t=>/^https:\/\/(chatgpt\.com|chat\.openai\.com)\//.test(t?.url||'');
   async function call(message,target=tab){
@@ -49,6 +50,8 @@
     reset:async()=>{await store.reset();say(t('panel.resetDone'));},
     raw:async()=>{const target=popup?(chatTab(tab)?tab:null):await lastChatTab();if(!target)return say(t('panel.needChat'),true);
       say(t('panel.rawRunning'));try{const r=await call({type:'panel:raw'},target);say(r?.status||r?.error||'',!!r?.error);}catch(e){say(e.message,true);}},
+    syncNow:async()=>{const target=popup?(chatTab(tab)?tab:null):await lastChatTab();if(!target)return say(t('panel.needChat'),true);
+      say(t('panel.syncRunning'));try{const r=await call({type:'sync:now'},target);if(r?.error)say(r.error,true);else{syncInfo=r;drawSync();say(t('panel.syncDone'));}}catch(e){say(e.message,true);}},
   };
   const panel=UI.mountSettings($('settings'),store,{action:name=>actions[name]?.(),help:topic=>chrome.tabs.create({url:chrome.runtime.getURL(`help.html#${topic}`)}),commands:()=>chrome.commands.getAll()},{open:popup?[]:UI.groups.map(g=>g.key)});
   const shown=I18n.locale;store.onChange((v,changed)=>{if(changed.includes('language')&&I18n.setLocale(v.language)!==shown)location.reload();});
@@ -82,14 +85,37 @@
       try{const r=await call({type:'panel:export',kind});if(kind!=='pdf'||r?.error)say(r?.status||'',!!r?.error);}catch(e){say(e.message,true);}finally{if($('export'))$('export').disabled=false;}};
     $('pick').onclick=async()=>{try{await call({type:'panel:open'});window.close();}catch(e){say(e.message,true);}};
   }
-  store.onChange((v,changed)=>{if(changed.includes('exportKind')||changed.includes('htmlForm'))drawHero();});
+  const syncBox=$('syncBox');
+  const formatSyncTime=iso=>{if(!iso)return '';const d=new Date(iso);if(Number.isNaN(d.getTime()))return '';const p=n=>String(n).padStart(2,'0');return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;};
+  drawSync=function(){
+    if(!syncBox||!syncInfo?.conversationId){if(syncBox)syncBox.hidden=true;return;}
+    syncBox.hidden=false;
+    const isGlobalAll=!!store.values.autoSyncEnabled&&store.values.autoSyncScope==='all';
+    const checked=!!syncInfo.tracked||isGlobalAll;
+    const rec=syncInfo.record;
+    let statusText=t('status.syncOff'),cls='';
+    if(syncInfo.busy)statusText=t('status.syncSyncing');
+    else if(rec?.status==='need_permission'){statusText=t('status.syncNeedPerm');cls='err';}
+    else if(rec?.status==='retrying'){statusText=t('status.syncRetrying',rec.attempt||1);cls='warn';}
+    else if(rec?.status==='error'){statusText=t('status.syncError',rec.error||t('err.unknown'));cls='err';}
+    else if(rec?.syncedAt)statusText=t('status.syncLast',formatSyncTime(rec.syncedAt),rec.syncVersion||1);
+    else if(store.values.autoSyncEnabled&&checked)statusText=t('status.syncReady');
+    syncBox.innerHTML=`<div class="xsync-row"><label class="xsync-lab"><input type="checkbox" class="tg" id="pSyncChat" role="switch" ${checked?'checked':''} ${isGlobalAll?'disabled':''}><span>${esc(t('side.syncChat'))}</span></label><button class="xlink" id="pSyncNow" type="button" ${syncInfo.busy?'disabled':''}>${esc(t('side.syncNow'))}</button></div><div class="xsync-meta ${cls}">${esc(statusText)}</div>`;
+    $('pSyncChat').onchange=async e=>{try{syncInfo=await call({type:'sync:toggleChat',enabled:e.target.checked});drawSync();}catch(err){say(err.message,true);}};
+    $('pSyncNow').onclick=async()=>{
+      if(rec?.status==='need_permission'){actions.obsFolder();window.close();return;}
+      await actions.syncNow();
+    };
+  };
+  store.onChange((v,changed)=>{if(changed.includes('exportKind')||changed.includes('htmlForm'))drawHero();if(changed.some(k=>k.startsWith('autoSync')))drawSync();});
   drawHero();
   if(chatTab(tab))try{
     summary=await call({type:'panel:summary'});
     if(summary?.error){say(summary.error,true);summary=null;}
     // The page keeps the script it loaded with; after a reload of the extension it needs a refresh.
     else if(summary&&summary.version!==loaded&&!stale)warnWith(t('panel.pageStale',bold(summary.version),bold(loaded)),t('panel.reloadPage'),()=>{chrome.tabs.reload(tab.id);window.close();});
-    drawHero();panel.refresh();
+    try{syncInfo=await call({type:'sync:status'});}catch{}
+    drawHero();drawSync();panel.refresh();
   }catch(e){say(t('panel.cannotConnect',e.message),true);}
 
   function css(){return `
@@ -99,6 +125,12 @@ body[data-page=popup]{width:360px}
 .xhd{display:flex;align-items:center;gap:10px;padding:14px 16px 10px}
 .xhd b{flex:1;font-size:15px;font-weight:600}
 .xhero{margin:0 12px;padding:14px 14px 12px;border-radius:16px;background:var(--bg)}
+.xsync{margin:8px 12px 0;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--pri) 9%,var(--bg));display:flex;flex-direction:column;gap:4px}
+.xsync-row{display:flex;align-items:center;gap:8px}
+.xsync-lab{display:inline-flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:12.5px;font-weight:600;cursor:pointer}
+.xsync-meta{font-size:11.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
+.xsync-meta.warn{color:color-mix(in srgb,var(--warn) 80%,var(--text))}
+.xsync-meta.err{color:color-mix(in srgb,var(--err) 75%,var(--text))}
 .xk{font-size:11.5px;color:var(--muted);font-weight:500}
 .xt{font-size:16px;font-weight:600;margin-top:2px;line-height:1.35;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .xm{font-size:12px;color:var(--muted);margin-top:2px;white-space:pre-wrap}

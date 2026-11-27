@@ -17,6 +17,15 @@ chrome.commands.onCommand.addListener(async command => {
   if (tab && allowed(tab.url)) chrome.tabs.sendMessage(tab.id, {type: 'panel:toggle'}).catch(() => {});
 });
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
+  // Broadcast from obsidian.html once the user picks/grants the vault folder, so paused queues resume.
+  if (message?.type === 'sync:permissionGranted' && sender.id === chrome.runtime.id) {
+    (async () => {
+      for (const tab of await chrome.tabs.query({url: ['https://chatgpt.com/*', 'https://chat.openai.com/*']}))
+        chrome.tabs.sendMessage(tab.id, {type: 'sync:resume'}).catch(() => {});
+      return {ok: true};
+    })().then(result => reply(result), error => reply({error: error.message}));
+    return true;
+  }
   if (!sender.tab || !allowed(sender.url)) return;
   (async () => {
     try {I18n.setLocale((await chrome.storage.local.get('language')).language);} catch {}
@@ -50,7 +59,8 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     // the export from it; it comes to the front itself when it needs a click.
     if (message.type === 'obsidian:open') {
       if (!/^[\w-]{8,64}$/.test(message.job || '')) throw Error(t('bg.badJob'));
-      const url = chrome.runtime.getURL(`obsidian.html?tab=${sender.tab.id}&job=${message.job}`);
+      const syncFlag = message.sync ? '&sync=1' : '';
+      const url = chrome.runtime.getURL(`obsidian.html?tab=${sender.tab.id}&job=${message.job}${syncFlag}`);
       return {id: (await chrome.tabs.create({url, index: sender.tab.index + 1, openerTabId: sender.tab.id, active: false})).id};
     }
     // 笔记文件夹 → 更改…: the same page, in front, without a job.

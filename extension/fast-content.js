@@ -1,5 +1,5 @@
 (function mount(again={}){
-  const version='1.0.8';
+  const version='1.1.0';
   // On chatgpt.com the manifest keeps this script in every tab (resident.js says so): the two
   // buttons beside the input box are always there and open the sidebar. Injected by hand (tests,
   // the live bundle) the sidebar opens at once, and injecting it again shows or hides it.
@@ -23,7 +23,7 @@
   // The sidebar: pick messages, export them; ⚙ shows the same settings as the toolbar panel.
   ui.innerHTML=`<style>${UI.css}${UI.pageCss}:host([hidden]){display:none!important}</style><div class="cx sb" id="sb" lang="${I18n.tag}">
 <div class="sbh"><button class="ib" id="back" title="${esc(t('side.back'))}" hidden>${icon('back')}</button><div class="logo" id="logo">${icon('logo')}</div><div class="ht"><b id="sbTitle">${esc(t('side.title'))}</b><span class="vpill" data-tip="${esc(UI.TIPS.ver)}">v${version}</span></div><button class="ib" id="reload" title="${esc(t('side.reload'))}">${icon('refresh')}</button><button class="ib" id="gear" title="${esc(t('side.settings'))}">${icon('gear')}</button><button class="ib" id="close" title="${esc(t('side.close'))}">${icon('x')}</button></div>
-<div class="view" id="listView"><div class="sbf"><button class="fchip" id="all">${esc(t('side.all'))}</button><button class="fchip" id="mine">${esc(t('side.mine'))}</button><button class="fchip" id="answers">${esc(t('side.answers'))}</button><button class="fchip" id="invert">${esc(t('side.invert'))}</button><button class="fchip" id="none">${esc(t('side.none'))}</button></div>
+<div class="view" id="listView"><div class="syncbar" id="syncBar" hidden><div class="synctop"><label class="synctog"><input type="checkbox" class="tg" id="syncChat" role="switch"><span>${esc(t('side.syncChat'))}</span></label><button class="xlink" id="syncNow" type="button">${esc(t('side.syncNow'))}</button></div><div class="syncmeta" id="syncMeta"></div></div><div class="sbf"><button class="fchip" id="all">${esc(t('side.all'))}</button><button class="fchip" id="mine">${esc(t('side.mine'))}</button><button class="fchip" id="answers">${esc(t('side.answers'))}</button><button class="fchip" id="invert">${esc(t('side.invert'))}</button><button class="fchip" id="none">${esc(t('side.none'))}</button></div>
 <div id="list"></div>
 <div class="sbfoot"><div class="stx" id="stx"><div id="status" role="status" aria-live="polite"></div><button id="stop" disabled title="${esc(t('side.stopTip'))}">${icon('stop')}${esc(t('side.stop'))}</button></div><textarea id="output" hidden readonly aria-label="${esc(t('side.previewLabel'))}"></textarea>
 <div class="sbrow"><span id="count">${esc(t('side.count',0,0))}</span><select id="kind" aria-label="${esc(t('side.kind'))}">${kindSelect}</select><span class="opill" id="exportPill"><button id="export">${esc(t('side.export'))}</button><button class="oopen" id="obsOpen" hidden title="${esc(t('side.obsOpenTip'))}" aria-label="${esc(t('side.obsOpen'))}">${icon('ext')}<span>${esc(t('side.obsOpen'))}</span></button></span><button class="ib" id="gear2" title="${esc(t('side.settings'))}">${icon('gear')}</button></div>
@@ -64,9 +64,9 @@
   }catch{return null;}}
   // Executes each message's compiled UI program in the sandbox page at its
   // default state, recovering text that fallbackMarkdown omits ({#each}, values).
-  async function renderStatic(messages,sandbox){const started=performance.now(),targets=messages.filter(m=>m.dil?.code),round=v=>Math.round(v);
+  async function renderStatic(messages,sandbox,opts=null){const started=performance.now(),targets=messages.filter(m=>m.dil?.code),round=v=>Math.round(v);
     if(!targets.length||!dilRender)return {uiMessages:targets.length};
-    $('status').textContent=t('status.rendering',targets.length);
+    if(!opts?.silent)$('status').textContent=t('status.rendering',targets.length);
     const client=sandbox?.client,evaluate=globalThis.ChatExportDilEvaluate||client,snapshot=globalThis.ChatExportDilSnapshot||client?.snapshot,preview=globalThis.ChatExportAppBlockPreview||client?.appblock,toMd=cardMd;
     // All messages go to the sandbox at once; cards within a message are also drawn in parallel.
     await Promise.all(targets.map(async m=>{const sent=performance.now();
@@ -75,7 +75,7 @@
       // Cards are drawn to PNG in the sandbox; if that fails, text alone is kept.
       // Their search images are downloaded first (the sandbox cannot fetch them) and drawn in.
       // The pictures are kept on the message, so a card drawn again later does not download them again.
-      const cards=(async()=>{try{try{dil.images=m.cardPictures=await pictures(m);}catch(e){if(e?.name==='AbortError')throw e;}const result=await snapshot(dil);applySnapshot(m,result);m.renderTimings={...result.timings,roundTripMs:round(performance.now()-sent)};}
+      const cards=(async()=>{try{try{dil.images=m.cardPictures=await pictures(m,opts);}catch(e){if(e?.name==='AbortError')throw e;}const result=await snapshot(dil);applySnapshot(m,result);m.renderTimings={...result.timings,roundTripMs:round(performance.now()-sent)};}
       // A drawing that failed as a whole (it timed out) while the program runs keeps the cards, each
       // marked as having no picture: the HTML export still shows them working, the ZIP keeps their text
       // and says so, and they are drawn again later.
@@ -153,12 +153,13 @@
     const credit='© Mapbox © OpenStreetMap';g.font=`${10*S}px system-ui,sans-serif`;const cw=g.measureText(credit).width+10*S;
     g.fillStyle='rgba(255,255,255,.85)';g.fillRect(out.width-cw,out.height-16*S,cw,16*S);g.fillStyle='#555';g.textAlign='right';g.fillText(credit,out.width-5*S,out.height-8*S);}
   // Downloads a message's UI images once (kept for the ZIP) and returns small copies to draw into cards.
-  async function pictures(m){
+  async function pictures(m,opts=null){
+    const sig=opts?.signal||controller?.signal,convId=opts?.conversationId||state?.conversationId;
     const urls=uiImageUrls(m),charts=cardSandboxPaths(m).filter(p=>/\.(?:png|jpe?g|gif|webp)$/i.test(p)),drawn={};m.smallImages=new Map();
     // Charts the code interpreter wrote and a card shows (src "sandbox:/mnt/data/a.png") are drawn
     // in too; the ZIP saves these same downloads as code files.
-    const [ui,files]=await Promise.all([urls.length?api.downloadUrls({urls,fetch:window.fetch.bind(window),fetchImage,signal:controller.signal,prefix:`assets/ui-${safeName(m.id)}-`}):[],
-      charts.length&&state?.conversationId?api.downloadSandboxFiles({items:charts.map(path=>({messageId:m.id,path})),conversationId:state.conversationId,fetch:window.fetch.bind(window),signal:controller.signal}):[]]);
+    const [ui,files]=await Promise.all([urls.length?api.downloadUrls({urls,fetch:window.fetch.bind(window),fetchImage,signal:sig,prefix:`assets/ui-${safeName(m.id)}-`}):[],
+      charts.length&&convId?api.downloadSandboxFiles({items:charts.map(path=>({messageId:m.id,path})),conversationId:convId,fetch:window.fetch.bind(window),signal:sig}):[]]);
     if(urls.length)m.uiImages=ui;m.cardFiles=files.filter(f=>f.blob);
     // The small copies are kept too: table thumbnails are cut from them instead of decoding the originals again.
     await Promise.all([...ui.filter(i=>i.blob).map(i=>[i.url,i.blob,400]),...m.cardFiles.map(f=>['sandbox:'+f.path,f.blob,900])].map(async([url,blob,max])=>{try{const small=await thumbnail(blob,max);m.smallImages.set(url,small);drawn[url]=await dataUrl(small);}catch{}}));
@@ -273,52 +274,60 @@
   async function send(message){const response=await chrome.runtime.sendMessage(message);if(response?.error)throw Error(response.error);return response;}
   // Recorded in the manifest so an export shows whether the tab went to the background.
   let hiddenDuringExport=false;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')hiddenDuringExport=true;});
-  async function build(zip,mode){const html=mode==='html',pdf=mode==='pdf';assertCurrent();const selected=ids();if(!selected.length)throw Error(t('err.selectOne'));
+  async function build(zip,mode,opts=null){const html=mode==='html',pdf=mode==='pdf',cur=opts?.stateOverride||state;
+    if(!opts?.stateOverride)assertCurrent();
+    const selected=opts?.allMessages?cur.messages.map(m=>m.id):ids();if(!selected.length)throw Error(t('err.selectOne'));
+    const saveImages=opts?.saveImages!==false,saveAttachments=opts?.saveAttachments!==false,saveUi=opts?.saveUi!==false;
     // Card pictures that failed while the tab was in the background are drawn again first.
-    if(zip&&!html){const n=state.messages.filter(m=>selected.includes(m.id)&&m.dil?.code&&failedCards(m)).length;if(n&&document.visibilityState==='visible'){$('status').textContent=t('status.rendering',n);await redrawCards(selected);assertCurrent();}}
+    if(zip&&!html&&saveUi&&!opts?.stateOverride){const n=cur.messages.filter(m=>selected.includes(m.id)&&m.dil?.code&&failedCards(m)).length;if(n&&document.visibilityState==='visible'){$('status').textContent=t('status.rendering',n);await redrawCards(selected);assertCurrent();}}
     hiddenDuringExport=document.visibilityState==='hidden';const started=performance.now(),messages=[],assets=[],warnings=[],cards=[];
-    for(const original of state.messages){if(!selected.includes(original.id))continue;
+    for(const original of cur.messages){if(!selected.includes(original.id))continue;
       // The PDF uses the cards as the ZIP does (picture lists as their stable table, never as HTML) and shows prose HTML as text, as the page does.
       // A message with cards goes through its cards even when they have no text at all (a drawing of
       // shapes): its picture, or its working card in the HTML. If nothing at all is left to show (no
       // text, no picture), ChatGPT's fallback text stands in.
       const fallbackText=escapeProseHtml()||pdf?original.mdEscaped??original.md:original.md;
-      const withCards=zip&&original.segments&&(original.staticMd||original.segments.some(s=>s.kind==='card'));
+      const withCards=zip&&saveUi&&original.segments&&(original.staticMd||original.segments.some(s=>s.kind==='card'));
       const text=withCards?((html?htmlSegments(original):await cardMarkdown(original,assets,warnings,cards,pdf)).trim()||fallbackText):original.staticMd||fallbackText;
       const md=!original.staticMd&&original.rescuedMd?`${text}\n\n${original.rescuedMd}`:text;
       // Components added by ChatGPT after this version: their text is kept, and the note says which ones.
       if(original.unknownComponents?.length)warnings.push(`${original.id}: ${t('warn.unknownComponents',original.unknownComponents.join(', '))}`);
       if(original.dil?.code&&!original.staticMd&&original.renderError)warnings.push(`${original.id}: ${t(original.rescuedMd?'warn.renderRescued':'warn.renderFailed',original.renderError)}`);      messages.push({...original,md:withVariants(original,md).replace(/!\[[^\]]*\]\(assets\/(?!card-)[^)]+\)/g,'')});
     }
-    if(zip)await attachData(messages,assets,warnings,html);
+    if(zip)await attachData(messages,assets,warnings,html,{stateOverride:cur,signal:opts?.signal,silent:!!opts?.silent,saveImages,saveAttachments,saveUi});
     // Only the text: what the ZIP would hold is named where it was.
     else for(const m of messages)m.md=m.md.replace(mapLink,'').replace(/\[((?:\\.|[^\]\\])*)\]\(attachment:[\w-]+\)/g,(_,name)=>t('md.attachmentInZip',name)).replace(/\[([^\]]*)\]\(datatable:[\w-]+\)/g,(_,label)=>t('md.tableInZip',label)).replace(/!\[[^\]]*\]\(asset:[\w-]+\)/g,()=>t('md.imageInZip')).replace(/\[([^\]]*)\]\(sandbox:\/[^)\s]+\)/g,(_,name)=>t('md.codeFileInZip',name)).replace(widgetToken,(_,id)=>t('md.appInZip',blocksOf(m).find(b=>b.invocationId===id)?.title||id));
-    const data={...state,messages,warnings:[...new Set([...state.warnings.filter(w=>selected.some(id=>w.startsWith(`${id}:`))),...warnings])]};
+    const data={...cur,messages,warnings:[...new Set([...cur.warnings.filter(w=>selected.some(id=>w.startsWith(`${id}:`))),...warnings])]};
     // The PDF reads its sections by the plain source line and role headings, so the Markdown settings stay out of it.
-    const v=cfg(),md=api.markdown(data,selected,state.url,pdf?{}:{yaml:v.yaml,model:v.model,timestamps:v.timestamps,roles:{user:Settings.role(v,'user'),assistant:Settings.role(v,'assistant')},created:state.raw?.create_time??state.messages[0]?.createTime});state.timings.prepareMs=performance.now()-started;
+    const v=cfg(),md=api.markdown(data,selected,cur.url,pdf?{}:{yaml:v.yaml,model:v.model,timestamps:v.timestamps,roles:{user:Settings.role(v,'user'),assistant:Settings.role(v,'assistant')},created:cur.raw?.create_time??cur.messages[0]?.createTime});if(cur.timings)cur.timings.prepareMs=performance.now()-started;
     return {md,assets,warnings:data.warnings,messages:selected,cards,items:messages};
   }
   // Data-first archive: original images via the files API and Intelligent UI
   // data as stored on the message, all in parallel and without the page.
-  async function attachData(messages,assets,warnings,html=false){
-    const signal=controller.signal,request=window.fetch.bind(window),safe=id=>String(id).replace(/[^\w-]/g,'_');
-    const fileIds=messages.flatMap(m=>(m.images||[]).map(i=>i.fileId));
-    if(fileIds.length)$('status').textContent=t('status.downloadingImages',fileIds.length);
-    const conversationId=state.conversationId;
+  async function attachData(messages,assets,warnings,html=false,opts=null){
+    const cur=opts?.stateOverride||state,signal=opts?.signal||controller?.signal,silent=!!opts?.silent;
+    const saveImages=opts?.saveImages!==false,saveAttachments=opts?.saveAttachments!==false,saveUi=opts?.saveUi!==false;
+    const request=window.fetch.bind(window),safe=id=>String(id).replace(/[^\w-]/g,'_');
+    const fileIds=saveImages?messages.flatMap(m=>(m.images||[]).map(i=>i.fileId)):[];
+    if(fileIds.length&&!silent)$('status').textContent=t('status.downloadingImages',fileIds.length);
+    const conversationId=cur.conversationId;
     // Files the code interpreter wrote, linked as sandbox:/mnt/data/... in the answer.
-    const linkedItems=conversationId?messages.flatMap(m=>[...new Set([...m.md.matchAll(sandboxLink)].map(x=>x[1]))].map(link=>({messageId:m.id,link,written:link.slice(8),path:decodedPath(link.slice(8))}))):[];
-    const cardItems=conversationId?messages.filter(m=>m.dil).flatMap(m=>cardSandboxPaths(m)
+    const linkedItems=saveAttachments&&conversationId?messages.flatMap(m=>[...new Set([...m.md.matchAll(sandboxLink)].map(x=>x[1]))].map(link=>({messageId:m.id,link,written:link.slice(8),path:decodedPath(link.slice(8))}))):[];
+    const cardItems=saveAttachments&&conversationId?messages.filter(m=>m.dil).flatMap(m=>cardSandboxPaths(m)
       .filter(path=>!linkedItems.some(x=>x.messageId===m.id&&x.path===decodedPath(path))).map(path=>({messageId:m.id,path,name:decodedPath(path).split('/').pop(),card:true}))):[];
     const sandboxItems=[...linkedItems,...cardItems];
-    const attachmentIds=messages.flatMap(m=>[...(m.attachments||[]),...(m.tables||[])].map(a=>a.fileId));
+    const attachmentIds=saveAttachments?messages.flatMap(m=>[...(m.attachments||[]),...(m.tables||[])].map(a=>a.fileId)):[];
     const [files,uiData,codeFiles,attached]=await Promise.all([
-      api.downloadFiles({ids:fileIds,conversationId,fetch:request,signal,onProgress:p=>$('status').textContent=t('status.downloadingProgress',p.done,p.total)}),
-      Promise.all(messages.filter(m=>m.dil).map(async m=>({m,images:m.uiImages||await api.downloadUrls({urls:uiImageUrls(m),fetch:request,fetchImage,signal,prefix:`assets/ui-${safe(m.id)}-`})}))),
-      api.downloadSandboxFiles({items:sandboxItems,conversationId,fetch:request,signal,cached:new Map(messages.flatMap(m=>(m.cardFiles||[]).map(f=>[`${m.id}\n${f.path}`,f.blob])))}),
-      api.downloadFiles({ids:attachmentIds,conversationId,fetch:request,signal})
+      fileIds.length?api.downloadFiles({ids:fileIds,conversationId,fetch:request,signal,onProgress:p=>{if(!silent)$('status').textContent=t('status.downloadingProgress',p.done,p.total);}}):[],
+      saveUi?Promise.all(messages.filter(m=>m.dil).map(async m=>({m,images:saveImages?(m.uiImages||await api.downloadUrls({urls:uiImageUrls(m),fetch:request,fetchImage,signal,prefix:`assets/ui-${safe(m.id)}-`})):[]}))):[],
+      sandboxItems.length?api.downloadSandboxFiles({items:sandboxItems,conversationId,fetch:request,signal,cached:new Map(messages.flatMap(m=>(m.cardFiles||[]).map(f=>[`${m.id}\n${f.path}`,f.blob])))}):[],
+      attachmentIds.length?api.downloadFiles({ids:attachmentIds,conversationId,fetch:request,signal}):[]
     ]);
     // Attachments keep the name the user gave them, beside the code files.
     const taken=new Set(codeFiles.filter(f=>f.blob).map(f=>f.localPath)),attachedById=new Map(attached.map(f=>[f.fileId,f]));
+    if(!saveAttachments){
+      for(const m of messages)m.md=m.md.replace(/\[((?:\\.|[^\]\\])*)\]\(attachment:[\w-]+\)/g,(_,name)=>t('md.attachmentInZip',name)).replace(/\[([^\]]*)\]\(datatable:[\w-]+\)/g,(_,label)=>t('md.tableInZip',label)).replace(/\[([^\]]*)\]\(sandbox:\/[^)\s]+\)/g,(_,name)=>t('md.codeFileInZip',name));
+    }else{
     for(const m of messages)for(const a of m.attachments||[]){const f=attachedById.get(a.fileId),link=`](attachment:${a.fileId})`;
       if(!f?.blob){warnings.push(`${m.id}: ${t('warn.attachmentFailed',a.name,f?.error||t('err.unknown'))}`);m.md=m.md.replace(/\[((?:\\.|[^\]\\])*)\]\(attachment:([\w-]+)\)/g,(x,text,id)=>id===a.fileId?t('md.notDownloaded',text):x);continue;}
       // Named like code files, so the link needs no escaping ("#2" would read as a heading link).
@@ -343,13 +352,17 @@
       const name=(item.name||f.path.split('/').pop()||'file').replace(/[\\`*_[\]<&#$]/g,'\\$&');
       cardLinks.set(m,[...(cardLinks.get(m)||[]),`- [${name}](${f.localPath})`]);}
     for(const [m,links] of cardLinks)m.md+=`\n\n**${t('md.codeFiles')}**\n\n${links.join('\n')}`;
+    }
     const byId=new Map(files.map(f=>[f.fileId,f]));
     for(const f of files)if(f.blob)assets.push({path:f.path,blob:f.blob,messageId:messages.find(m=>(m.images||[]).some(i=>i.fileId===f.fileId))?.id,kind:'original-image'});
-    for(const m of messages)m.md=m.md.replace(/!\[([^\]]*)\]\(asset:([\w-]+)\)/g,(_,alt,id)=>{const f=byId.get(id);if(f?.blob)return `![${alt}](${f.path})`;warnings.push(`${m.id}: ${t('warn.imageFailed',id,f?.error||t('err.unknown'))}`);return t('md.imageFailed',id);});
-    for(const {m,images} of uiData){
+    for(const m of messages)m.md=m.md.replace(/!\[([^\]]*)\]\(asset:([\w-]+)\)/g,(_,alt,id)=>{if(!saveImages)return t('md.imageInZip');const f=byId.get(id);if(f?.blob)return `![${alt}](${f.path})`;warnings.push(`${m.id}: ${t('warn.imageFailed',id,f?.error||t('err.unknown'))}`);return t('md.imageFailed',id);});
+    if(!saveUi){
+      for(const m of messages)m.md=m.md.replace(mapLink,'').replace(widgetToken,(_,id)=>t('md.appInZip',blocksOf(m).find(b=>b.invocationId===id)?.title||id));
+    }else for(const {m,images} of uiData){
       const path=`ui/msg-${safe(m.id)}.json`,localAssets={};
       for(const image of images){if(image.blob){localAssets[image.url]=image.path;assets.push({path:image.path,blob:image.blob,messageId:m.id,kind:'ui-image'});m.md=m.md.split(`](${image.url})`).join(`](${image.path})`);}else warnings.push(`${m.id}: ${t('warn.uiImageFailed',image.error)}`);}
-      if(!html)await stripGalleries(m,images,assets);await captureMaps(m,assets,warnings,html);
+      if(!html&&saveImages)await stripGalleries(m,images,assets);
+      if(saveImages)await captureMaps(m,assets,warnings,html);else m.md=m.md.replace(mapLink,'');
       const blocks=blocksOf(m).map(b=>({...b,path:`ui/appblock-${safe(m.id)}-${safe(b.id)}.html`})),linked=new Set();
       for(const b of blocks)assets.push({path:b.path,blob:new Blob([dilRender.standaloneHtml(b)],{type:'text/html'}),messageId:m.id,kind:'appblock'});
       // The preview image goes above the link; inside a folded card note each new line keeps the quote prefix.
@@ -436,8 +449,11 @@
   // chunks (obsidian-send.js), so length and image count do not matter; it then names the note's
   // obsidian:// link, which opens it. The link is kept per chat in this browser for the pill's 打开 half,
   // so a dismissed Chrome prompt costs one click and no second copy.
-  let obsidianJob=null;
-  try{chrome.runtime.onConnect?.addListener(port=>{const job=obsidianJob;if(!job||port.name!==`obsidian:${job.id}`)return;obsidianJob=null;job.connected(port);});}catch{}
+  let obsidianJob=null;const syncJobs=new Map();
+  try{chrome.runtime.onConnect?.addListener(port=>{
+    if(obsidianJob&&port.name===`obsidian:${obsidianJob.id}`){const job=obsidianJob;obsidianJob=null;job.connected(port);return;}
+    const m=port.name?.match(/^obsidian:(.+)$/);if(m&&syncJobs.has(m[1])){const job=syncJobs.get(m[1]);syncJobs.delete(m[1]);job.connected(port);}
+  });}catch{}
   // The links live in chrome.storage.local, which the ChatGPT page cannot read. Links that 0.11.33 and
   // earlier kept in the page's localStorage move over once and are removed there. Without
   // chrome.storage (tests, the live bundle) they stay in localStorage.
@@ -507,7 +523,7 @@
   function closeSidebar(){host.hidden=true;placeDock();}
   $('close').onclick=closeSidebar;$('gear').onclick=$('gear2').onclick=()=>showView('settings');$('back').onclick=()=>showView('list');
   const panelSettings=UI.mountSettings($('setView'),settings,{
-    action:name=>{if(name==='raw')rawExport();else if(name==='obsFolder')send({type:'obsidian:setup'}).catch(e=>fail(e.message));else if(name==='reset')settings.reset();else if(name==='shortcut')send({type:'open:shortcuts'}).catch(e=>fail(e.message));},
+    action:name=>{if(name==='raw')rawExport();else if(name==='obsFolder')send({type:'obsidian:setup'}).catch(e=>fail(e.message));else if(name==='syncNow'){const id=target().id;if(id&&syncQueue)syncQueue.enqueue(id,{force:true,interactive:false,reason:'settings'});}else if(name==='reset')settings.reset();else if(name==='shortcut')send({type:'open:shortcuts'}).catch(e=>fail(e.message));},
     // A page script cannot open extension pages; the background opens the explanation in a new tab.
     help:topic=>send({type:'open:help',topic}).catch(e=>fail(e.message)),
     commands:()=>send({type:'commands:get'}).then(r=>r.commands)});
@@ -608,6 +624,151 @@
   // The toolbar panel asks for the chat's summary, opens the sidebar and exports through these.
   async function summary(){if(!target().id)return {version,page:'other'};await settings.ready;await ensureLoaded();const ms=state?.messages||[];
     return {version,page:'chat',ok:!!state,title:state?.title||document.title,messages:ms.length,cards:ms.reduce((n,m)=>n+(m.segments||[]).filter(s=>s.kind==='card').length,0),images:ms.reduce((n,m)=>n+(m.images||[]).length,0),files:fileCount(chosen()),obsidianNote:!!savedNote(),selected:ids().length,status:state?'':$('status').textContent};}
+  // Real-time auto-sync engine: watches conversation mutations and syncs incrementally to Obsidian.
+  const AutoSync=globalThis.ChatExportAutoSync||null;
+  const syncStore=AutoSync?AutoSync.createSyncStore(notesArea,(()=>{try{return chrome.storage?.onChanged||null;}catch{return null;}})()):null;
+  let syncQueue=null,syncWatcher=null;
+  const formatSyncTime=iso=>{if(!iso)return '';const d=new Date(iso);if(Number.isNaN(d.getTime()))return '';const p=n=>String(n).padStart(2,'0');return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;};
+  function syncStatusPayload(){
+    const id=target().id||'';const v=cfg();const rec=id?syncStore?.getRecord(id):null;
+    return {
+      conversationId:id,tracked:id?!!syncStore?.isTracked(id):false,record:rec,
+      queueCount:Object.keys(syncStore?.getQueue()||{}).length,
+      enabled:!!v.autoSyncEnabled,scope:v.autoSyncScope,folder:v.obsidianFolder||'',subfolder:v.autoSyncSubfolder||'ChatGPT-Raw',
+      busy:!!(id&&syncQueue?.isBusy(id)),
+    };
+  }
+  function updateSyncBar(){
+    const bar=$('syncBar');if(!bar||!AutoSync||!resident){if(bar)bar.hidden=true;return;}
+    const info=syncStatusPayload();
+    if(!info.conversationId){bar.hidden=true;return;}
+    bar.hidden=false;
+    const sw=$('syncChat'),nowBtn=$('syncNow'),meta=$('syncMeta');
+    const isGlobalAll=info.enabled&&info.scope==='all';
+    sw.checked=info.tracked||isGlobalAll;sw.disabled=isGlobalAll;
+    nowBtn.disabled=info.busy;
+    const rec=info.record;
+    meta.className='syncmeta';
+    if(info.busy)meta.textContent=t('status.syncSyncing');
+    else if(rec?.status==='need_permission'){meta.classList.add('err');meta.textContent=t('status.syncNeedPerm');}
+    else if(rec?.status==='retrying'){meta.classList.add('warn');meta.textContent=t('status.syncRetrying',rec.attempt||1);}
+    else if(rec?.status==='error'){meta.classList.add('err');meta.textContent=t('status.syncError',rec.error||t('err.unknown'));}
+    else if(rec?.syncedAt)meta.textContent=t('status.syncLast',formatSyncTime(rec.syncedAt),rec.syncVersion||1);
+    else if(info.enabled&&(info.scope==='all'||info.tracked))meta.textContent=t('status.syncReady');
+    else meta.textContent=t('status.syncOff');
+  }
+  async function syncConversation(task){
+    const {conversationId,force=false,interactive=false}=task;
+    if(!AutoSync||!conversationId)throw Object.assign(Error('skip'),{code:'SKIPPED'});
+    const sender=globalThis.ChatExportObsidian;if(!sender)throw Error(t('err.obsNoModule'));
+    await settings.ready;await syncStore.ready;
+    const v=cfg(),where=target();
+    if(!where.id||where.id!==conversationId)throw Object.assign(Error('switched'),{code:'SKIPPED'});
+    if(streaming())throw Object.assign(Error(t('err.streaming')),{code:'SKIPPED'});
+    if(!force&&!AutoSync.shouldSyncConversation(v,conversationId,syncStore.snapshot.tracked))throw Object.assign(Error('disabled'),{code:'SKIPPED'});
+    const syncCtrl=new AbortController(),url=route(),leaf=lastMessage(),sandbox=v.autoSyncUi?startSandbox():null;
+    let syncState;
+    try{
+      const data=await api.loadConversation({...where,leafId:leaf,fetch:window.fetch.bind(window),signal:syncCtrl.signal});
+      if(route()!==url||streaming())throw Object.assign(Error('changed'),{code:'SKIPPED'});
+      syncState={...data,url,leaf,conversationId:where.share?data.conversationId:where.id,timings:{}};
+      if(v.autoSyncUi)await renderStatic(data.messages,sandbox,{silent:true,signal:syncCtrl.signal,conversationId:syncState.conversationId});
+    }finally{sandbox?.client.close();}
+    const result=await build(true,'obsidian',{stateOverride:syncState,allMessages:true,silent:true,signal:syncCtrl.signal,saveImages:v.autoSyncImages,saveAttachments:v.autoSyncAttachments,saveUi:v.autoSyncUi});
+    const contentHash=AutoSync.computeHash({conversationId:syncState.conversationId,title:syncState.title,messages:result.items,assets:result.assets,md:result.md});
+    const rawUpdated=syncState.raw?.update_time??syncState.messages.at(-1)?.createTime??(Date.now()/1000);
+    const updatedAt=new Date(rawUpdated>1e12?rawUpdated:rawUpdated*1000).toISOString();
+    const rawCreated=syncState.raw?.create_time??syncState.messages[0]?.createTime;
+    const createdAt=rawCreated?new Date(rawCreated>1e12?rawCreated:rawCreated*1000).toISOString():updatedAt;
+    const existing=syncStore.getRecord(conversationId);
+    if(!force&&existing&&AutoSync.isStaleUpdate(existing,updatedAt))return {skipped:'stale'};
+    if(!force&&existing?.status==='synced'&&existing?.contentHash===contentHash)return {skipped:'unchanged'};
+    const id=crypto.randomUUID();
+    const jobPayload={
+      meta:{
+        mode:'sync',interactive,force,conversationId:syncState.conversationId,
+        title:Settings.fileBase(v,{title:syncState.title}),rawTitle:syncState.title,
+        folderName:existing?.folderName||'',subfolder:v.autoSyncSubfolder||'ChatGPT-Raw',
+        source:syncState.url,version,exportedAt:new Date().toISOString(),
+        createdAt,updatedAt,contentHash,
+        messageCount:result.items.length,messageIds:result.items.map(m=>m.id),
+        warnings:result.warnings,
+      },
+      md:result.md,files:result.assets,
+    };
+    const written=await new Promise((ok,reject)=>{
+      const timer=setTimeout(()=>{syncJobs.delete(id);reject(Error(t('err.obsNoResponse')));},45000);
+      syncJobs.set(id,{connected:port=>{
+        port.onMessage.addListener(m=>{
+          if(m.type==='written'){clearTimeout(timer);ok(m);}
+          else if(m.type==='need_permission'){clearTimeout(timer);reject(Object.assign(Error(t('status.syncNeedPerm')),{code:'NEED_PERMISSION',reason:m.reason}));}
+          else if(m.type==='error'){clearTimeout(timer);reject(Error(m.message||t('err.unknown')));}
+        });
+        port.onDisconnect.addListener(()=>{clearTimeout(timer);reject(Error(t('err.obsClosed')));});
+        sender.sendJob(port,jobPayload).catch(e=>{clearTimeout(timer);reject(e);});
+      }});
+      send({type:'obsidian:open',job:id,sync:!interactive}).catch(e=>{clearTimeout(timer);syncJobs.delete(id);reject(e);});
+    });
+    if(written.url)saveNote(conversationId,written.url);
+    await syncStore.dequeuePersistent(conversationId);
+    await syncStore.updateRecord(conversationId,{
+      force,status:'synced',folderName:written.folderName||existing?.folderName||'',
+      contentHash,updatedAt,syncedAt:written.metadata?.synced_at||new Date().toISOString(),
+      syncVersion:written.metadata?.sync_version||((existing?.syncVersion||0)+1),
+      messageCount:result.items.length,path:written.path||existing?.path||'',error:'',
+    });
+    return written;
+  }
+  if(AutoSync){
+    syncQueue=AutoSync.createSyncQueue({
+      run:syncConversation,
+      onStatus:(id,ev)=>{
+        if(ev.status==='need_permission'){
+          syncStore.enqueuePersistent(id,ev.reason||'grant');
+          syncStore.updateRecord(id,{status:'need_permission',error:ev.error||''});
+          if(resident&&host.hidden)toast(t('status.syncNeedPerm'));
+        }else if(ev.status==='retrying'){
+          syncStore.updateRecord(id,{status:'retrying',error:ev.error||'',attempt:ev.attempt});
+        }else if(ev.status==='error'){
+          syncStore.enqueuePersistent(id,'error');
+          syncStore.updateRecord(id,{status:'error',error:ev.error||''});
+        }
+        updateSyncBar();
+      },
+    });
+    syncStore.onChange(updateSyncBar);
+    settings.onChange(updateSyncBar);
+    $('syncChat')?.addEventListener('change',async e=>{
+      const id=target().id;if(!id)return;
+      const on=e.target.checked;
+      await syncStore.setTracked(id,on);
+      if(on&&cfg().autoSyncEnabled)syncQueue.enqueue(id,{reason:'track_on'});
+      updateSyncBar();
+    });
+    $('syncNow')?.addEventListener('click',()=>{
+      const id=target().id;if(!id)return;
+      const rec=syncStore.getRecord(id);
+      if(rec?.status==='need_permission'){send({type:'obsidian:setup'}).catch(()=>{});return;}
+      syncQueue.enqueue(id,{force:true,interactive:false,reason:'manual'});
+    });
+    if(resident){
+      const domSig=()=>{const nodes=onScreen('[data-message-id],[data-chatgpt-search-message-ids]').filter(n=>!n.closest('[hidden],[aria-hidden="true"]'));
+        const last=nodes.at(-1);return `${nodes.length}|${lastMessage()||''}|${(last?.textContent||'').length}`;};
+      syncWatcher=AutoSync.createWatcher({
+        doc:document,win:window,
+        getConversationId:()=>target().id||'',
+        isStreaming:()=>!!streaming(),
+        getDomSignature:domSig,
+        onTrigger:(id,reason)=>{if(AutoSync.shouldSyncConversation(cfg(),id,syncStore.snapshot.tracked))syncQueue.enqueue(id,{reason});},
+      });
+      Promise.all([settings.ready,syncStore.ready]).then(()=>{
+        updateSyncBar();
+        const id=target().id;
+        if(id&&!streaming()&&(AutoSync.shouldSyncConversation(cfg(),id,syncStore.snapshot.tracked)||syncStore.getQueue()[id]))
+          setTimeout(()=>syncQueue.enqueue(id,{reason:'resume'}),1200);
+      });
+    }
+  }
   try{chrome.runtime.onMessage?.addListener((m,sender,reply)=>{if(!host.isConnected||sender?.id!==chrome.runtime.id)return;
     const respond=p=>{p.then(reply,e=>reply({error:e?.message||String(e)}));return true;};
     if(m?.type==='panel:summary')return respond(summary());
@@ -615,11 +776,16 @@
     if(m?.type==='panel:toggle'){if(host.hidden)openSidebar();else closeSidebar();reply({ok:true});return;}
     if(m?.type==='panel:export')return respond(quickExport(m.kind).then(()=>{const text=$('status').textContent;return {status:text,error:!!text&&text===lastError};}));
     if(m?.type==='panel:obsidianOpen'){reply({ok:!!openSaved()});return;}
-    if(m?.type==='panel:raw')return respond(ensureLoaded().then(rawExport).then(()=>({status:$('status').textContent})));});}catch{}
+    if(m?.type==='panel:raw')return respond(ensureLoaded().then(rawExport).then(()=>({status:$('status').textContent})));
+    if(m?.type==='sync:status')return respond(Promise.all([settings.ready,syncStore?.ready]).then(()=>syncStatusPayload()));
+    if(m?.type==='sync:toggleChat')return respond((async()=>{const id=target().id;if(!id||!syncStore)return syncStatusPayload();await syncStore.setTracked(id,!!m.enabled);if(m.enabled&&cfg().autoSyncEnabled)syncQueue?.enqueue(id,{reason:'popup_toggle'});updateSyncBar();return syncStatusPayload();})());
+    if(m?.type==='sync:now')return respond((async()=>{const id=target().id;if(!id||!syncQueue)throw Error(t('err.openChat'));await syncConversation({conversationId:id,force:true,interactive:!!m.interactive});updateSyncBar();return syncStatusPayload();})());
+    if(m?.type==='sync:resume'){const id=target().id;if(id&&syncQueue&&(syncStore?.getQueue()[id]||AutoSync?.shouldSyncConversation(cfg(),id,syncStore?.snapshot.tracked)))syncQueue.enqueue(id,{reason:'permission_granted'});reply({ok:true});return;}});}catch{}
   // ChatGPT switches chats without reloading the page; while the sidebar is open,
   // read the new chat once (a failed read is not retried until the chat changes again).
-  const watch=setInterval(()=>{if(!host.isConnected)return clearInterval(watch);theme();placeDock();if(host.hidden||busyFlag||route()===readRoute||streaming())return;load();},800);
+  const watch=setInterval(()=>{if(!host.isConnected){syncWatcher?.destroy();syncQueue?.destroy();return clearInterval(watch);}theme();placeDock();updateSyncBar();if(host.hidden||busyFlag||route()===readRoute||streaming())return;load();},800);
   addEventListener('resize',placeDock);
+  addEventListener('unload',()=>{syncWatcher?.destroy();syncQueue?.destroy();});
   $('stop').onclick=()=>controller?.abort();document.addEventListener('keydown',e=>{if(e.key==='Escape'&&busyFlag&&host.isConnected)controller?.abort();});
   theme();syncSettings();
   if(again.open)openSidebar(again.view);else if(!resident)load();

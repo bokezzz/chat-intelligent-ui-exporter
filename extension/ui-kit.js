@@ -64,8 +64,15 @@
       {key:'sources',label:t('set.sources'),tip:'pending',value:onOff('set.sources.on'),control:'switch'},
       {key:'roles',label:t('set.roles'),control:'roles'},
     ]},
-    {key:'obs',title:'Obsidian',summary:v=>v.obsidianFolder?t('set.obs.summary',v.obsidianFolder):t('set.obs.none'),rows:[
+    {key:'obs',title:'Obsidian',summary:v=>v.obsidianFolder?(v.autoSyncEnabled?t('set.obs.syncOn',v.obsidianFolder):t('set.obs.summary',v.obsidianFolder)):t('set.obs.none'),rows:[
       {key:'obsFolder',label:t('set.obsFolder'),tip:'obs',value:v=>v.obsidianFolder?`${v.obsidianFolder} /`:t('set.obsFolder.none'),chip:v=>!!v.obsidianFolder,control:'button',text:t('set.obsFolder.button')},
+      {key:'autoSyncSubfolder',label:t('set.autoSyncSubfolder'),value:v=>v.autoSyncSubfolder||'ChatGPT-Raw',mono:true,control:'text',width:130},
+      {key:'autoSyncEnabled',label:t('set.autoSyncEnabled'),value:onOff('set.autoSyncEnabled.on'),control:'switch'},
+      {key:'autoSyncScope',label:t('set.autoSyncScope'),dep:true,dim:v=>!v.autoSyncEnabled,value:v=>v.autoSyncScope==='selected'?t('set.autoSyncScope.selected'):t('set.autoSyncScope.all'),control:'seg',options:[['all',t('set.autoSyncScope.allShort')],['selected',t('set.autoSyncScope.selectedShort')]]},
+      {key:'autoSyncImages',label:t('set.autoSyncImages'),dep:true,dim:v=>!v.autoSyncEnabled,value:onOff('set.on'),control:'switch'},
+      {key:'autoSyncAttachments',label:t('set.autoSyncAttachments'),dep:true,dim:v=>!v.autoSyncEnabled,value:onOff('set.on'),control:'switch'},
+      {key:'autoSyncUi',label:t('set.autoSyncUi'),dep:true,dim:v=>!v.autoSyncEnabled,value:onOff('set.on'),control:'switch'},
+      {key:'syncNow',label:t('set.syncNow'),value:()=>t('set.syncNow.value'),control:'button',text:t('set.syncNow.button')},
     ]},
     {key:'btns',title:t('set.btns'),summary:v=>v.dockShow?t('set.btns.shown',v.dockPos==='corner'?t('set.dockPos.corner'):t('set.dockPos.input')):t('set.btns.hidden'),rows:[
       {key:'dockShow',label:t('set.dockShow'),value:onOff('set.dockShow.on','set.dockShow.off'),control:'switch'},
@@ -141,7 +148,7 @@
       const head=e.target.closest?.('.acch');if(head&&(e.key==='Enter'||e.key===' ')){e.preventDefault();head.click();}});
     wrap.addEventListener('change',e=>{const el=e.target;if(!el.id)return;
       if(el.classList.contains('tg'))store.set({[el.id]:el.checked});
-      else if(el.id in S.defaults)store.set({[el.id]:el.id==='roleUser'||el.id==='roleAssistant'||el.id==='filePrefix'?el.value.trim()||S.defaults[el.id]:el.value});},true);
+      else if(el.id in S.defaults)store.set({[el.id]:el.id==='roleUser'||el.id==='roleAssistant'||el.id==='filePrefix'||el.id==='autoSyncSubfolder'?el.value.trim()||S.defaults[el.id]:el.value});},true);
     function refresh(v=store.values){
       for(const {row,el} of rows.values()){
         const input=el.querySelector(`#${row.key}`);
@@ -271,6 +278,12 @@
 .vpill{display:inline-block;font:700 11px/1 ui-monospace,Consolas,monospace;padding:4px 7px;border-radius:999px;background:var(--surface);color:var(--text)}
 .view{display:flex;flex-direction:column;flex:1;min-height:0}
 .sbf{display:flex;gap:6px;flex-wrap:wrap;padding:12px 14px 10px;flex:none}
+.syncbar{padding:8px 14px;background:color-mix(in srgb,var(--pri) 9%,var(--surface));border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:4px;flex:none}
+.synctop{display:flex;align-items:center;gap:8px}
+.synctog{display:inline-flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:12.5px;font-weight:600;cursor:pointer}
+.syncmeta{font-size:11.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
+.syncmeta.warn{color:color-mix(in srgb,var(--warn) 80%,var(--text))}
+.syncmeta.err{color:color-mix(in srgb,var(--err) 75%,var(--text))}
 .fchip{border:1px solid color-mix(in srgb,var(--text) 28%,transparent);background:transparent;border-radius:8px;padding:3px 10px;font-size:12px;color:var(--text)}
 .fchip:hover{background:color-mix(in srgb,var(--text) 5%,transparent)}
 .fchip.on{background:color-mix(in srgb,var(--pri) 20%,var(--surface));border-color:transparent;font-weight:600}
